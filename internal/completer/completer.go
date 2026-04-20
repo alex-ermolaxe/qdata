@@ -81,26 +81,28 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 // completeFields предлагает поля схемы с учётом вложенности
 func (c *Completer) completeFields(prefix string) ([][]rune, int) {
 	allPaths := c.schema.AllPaths()
+	upperPrefix := strings.ToUpper(prefix)
 
-	// Если есть точка — ищем вложенные поля
-	if dotIdx := strings.LastIndex(prefix, "."); dotIdx >= 0 {
-		parentPath := prefix[:dotIdx]
-		childPrefix := prefix[dotIdx+1:]
-		_ = childPrefix
-
+	// Если есть точка — предлагаем только вложенные поля нужного родителя
+	if dotIdx := strings.LastIndex(upperPrefix, "."); dotIdx >= 0 {
 		var matches []string
 		for _, path := range allPaths {
-			if strings.HasPrefix(path, parentPath+".") {
-				rest := path[len(parentPath)+1:]
-				if !strings.Contains(rest, ".") {
-					matches = append(matches, path)
-				}
+			if strings.HasPrefix(strings.ToUpper(path), upperPrefix) {
+				matches = append(matches, path)
 			}
 		}
 		return completeFrom(matches, prefix)
 	}
 
-	return completeFrom(allPaths, prefix)
+	// Иначе предлагаем все поля верхнего уровня
+	var topLevel []string
+	for _, path := range allPaths {
+		if !strings.Contains(path, ".") {
+			topLevel = append(topLevel, path)
+		}
+	}
+
+	return completeFrom(topLevel, prefix)
 }
 
 // completeFrom фильтрует список по префиксу и возвращает подходящие варианты
@@ -109,7 +111,8 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 	var matches []string
 
 	for _, opt := range options {
-		if strings.HasPrefix(opt, upperPrefix) {
+		// Сравниваем регистронезависимо
+		if strings.HasPrefix(strings.ToUpper(opt), upperPrefix) {
 			matches = append(matches, opt)
 		}
 	}
@@ -120,6 +123,7 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 
 	suffixes := make([][]rune, len(matches))
 	for i, match := range matches {
+		// Суффикс — это часть оригинального варианта после префикса
 		suffix := match[len(prefix):]
 
 		if isLower(prefix) {
