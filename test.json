@@ -1,35 +1,72 @@
 [
   {
     "id": 1,
-    "name": "Alice",
-    "age": 30,
+    "name": "Alice Johnson",
+    "age": 32,
     "email": "alice@example.com",
+    "status": "active",
+    "score": 87.5,
     "address": {
-      "city": "New York",
-      "street": "5th Avenue",
-      "zip": "10001"
-    }
+      "city": "Moscow",
+      "zip": "101000",
+      "street": "Arbat 12"
+    },
+    "tags": ["admin", "user"]
   },
   {
     "id": 2,
-    "name": "Bob",
+    "name": "Bob Smith",
     "age": 25,
     "email": "bob@example.com",
+    "status": "inactive",
+    "score": 62.0,
     "address": {
-      "city": "Los Angeles",
-      "street": "Sunset Boulevard",
-      "zip": "90001"
-    }
+      "city": "Saint Petersburg",
+      "zip": "190000",
+      "street": "Nevsky 45"
+    },
+    "tags": ["user"]
   },
   {
     "id": 3,
-    "name": "Charlie",
-    "age": 28,
-    "email": "charlie@example.com",
+    "name": "Carol White",
+    "age": 41,
+    "email": "carol@example.com",
+    "status": "active",
+    "score": 91.0,
     "address": {
-      "city": "Chicago",
-      "street": "Michigan Avenue",
-      "zip": "60601"
-    }
+      "city": "Moscow",
+      "zip": "102000",
+      "street": "Tverskaya 8"
+    },
+    "tags": ["user", "moderator"]
+  },
+  {
+    "id": 4,
+    "name": "David Brown",
+    "age": 19,
+    "email": "david@example.com",
+    "status": "active",
+    "score": 45.5,
+    "address": {
+      "city": "Kazan",
+      "zip": "420000",
+      "street": "Baumana 3"
+    },
+    "tags": ["user"]
+  },
+  {
+    "id": 5,
+    "name": "Elena Petrova",
+    "age": 38,
+    "email": "elena@example.com",
+    "status": "inactive",
+    "score": 78.0,
+    "address": {
+      "city": "Moscow",
+      "zip": "103000",
+      "street": "Leninsky 22"
+    },
+    "tags": ["user", "moderator"]
   }
 ]
