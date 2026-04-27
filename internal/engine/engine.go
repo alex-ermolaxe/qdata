@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/alex-ermolaxe/qdata/internal/completer"
+	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/format"
+	"github.com/alex-ermolaxe/qdata/internal/parser"
 	"github.com/chzyer/readline"
 )
 
@@ -106,25 +108,106 @@ func (e *Engine) handleCommand(input string) error {
 	}
 
 	command := strings.ToUpper(parts[0])
+	args := strings.TrimSpace(input[len(parts[0]):])
 
 	switch command {
 	case "EXIT":
 		fmt.Println("Bye!")
 		os.Exit(0)
-
 	case "SCHEMA":
 		e.session.Schema.Print()
-
 	case "COUNT":
 		fmt.Printf("%d records\n", e.session.TotalRecords())
-
 	case "RESET":
 		e.session.Reset()
 		fmt.Printf("✓ Reset to original: %d records\n", e.session.TotalRecords())
-
+	case "WHERE":
+		if args == "" {
+			return fmt.Errorf("WHERE requires a condition")
+		}
+		return e.handleWhere(args)
+	case "SELECT":
+		if args == "" {
+			return fmt.Errorf("SELECT requires field names")
+		}
+		return e.handleSelect(args)
+	case "SHOW":
+		return e.handleShow(args)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 	}
 
 	return nil
+}
+
+func (e *Engine) handleWhere(args string) error {
+	group, err := parser.Parse(args)
+	if err != nil {
+		return fmt.Errorf("failed to parse condition: %w", err)
+	}
+
+	was := e.session.TotalRecords()
+
+	filtered, err := executor.Filter(e.session.Current, group)
+	if err != nil {
+		return fmt.Errorf("failed to apply filter: %w", err)
+	}
+
+	e.session.Current = filtered
+	fmt.Printf("✓ Found: %d records (was: %d)\n", e.session.TotalRecords(), was)
+
+	return nil
+}
+
+func (e *Engine) handleSelect(args string) error {
+	fields := splitFields(args)
+	was := e.session.TotalRecords()
+
+	e.session.Current = executor.Select(e.session.Current, fields)
+	fmt.Printf("✓ Applied SELECT to %d records (was: %d)\n", e.session.TotalRecords(), was)
+
+	return nil
+}
+
+// splitFields разбивает строку полей через запятую
+func splitFields(args string) []string {
+	parts := strings.Split(args, ",")
+	fields := make([]string, 0, len(parts))
+	for _, p := range parts {
+		field := strings.TrimSpace(p)
+		if field != "" {
+			fields = append(fields, field)
+		}
+	}
+	return fields
+}
+
+func (e *Engine) handleShow(args string) error {
+	limit := 0
+	offset := 0
+
+	// Разбираем аргументы SHOW LIMIT 10 OFFSET 20
+	parts := strings.Fields(strings.ToUpper(args))
+	for i := 0; i < len(parts); i++ {
+		switch parts[i] {
+		case "LIMIT":
+			if i+1 >= len(parts) {
+				return fmt.Errorf("LIMIT requires a number")
+			}
+			if _, err := fmt.Sscanf(parts[i+1], "%d", &limit); err != nil {
+				return fmt.Errorf("invalid LIMIT value: %s", parts[i+1])
+			}
+			i++
+		case "OFFSET":
+			if i+1 >= len(parts) {
+				return fmt.Errorf("OFFSET requires a number")
+			}
+			if _, err := fmt.Sscanf(parts[i+1], "%d", &offset); err != nil {
+				return fmt.Errorf("invalid OFFSET value: %s", parts[i+1])
+			}
+			i++
+		}
+	}
+
+	return executor.Show(e.session.Current, limit, offset)
 }
