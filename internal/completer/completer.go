@@ -8,29 +8,29 @@ import (
 	"github.com/chzyer/readline"
 )
 
-// keywords — список доступных команд
+// keywords - list of available commands
 var keywords = []string{
 	"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW",
 	"SAVE", "RESET", "COUNT", "SCHEMA", "EXIT",
 }
 
-// sortDirections — направления сортировки
+// sortDirections - sort directions
 var sortDirections = []string{"ASC", "DESC"}
 
-// saveFormats — доступные форматы сохранения
+// saveFormats - available save formats
 var saveFormats = []string{"json", "xml", "csv"}
 
-// Completer — реализует readline.AutoCompleter
+// Completer - implements readline.AutoCompleter
 type Completer struct {
 	schema *schema.Schema
 }
 
-// New создаёт новый Completer на основе схемы
+// New creates a new Completer based on schema
 func New(s *schema.Schema) *Completer {
 	return &Completer{schema: s}
 }
 
-// Do реализует интерфейс readline.AutoCompleter
+// Do implements readline.AutoCompleter interface
 func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	original := string(line[:pos])
 	input := strings.ToUpper(original)
@@ -41,7 +41,7 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		return toRunes(keywords), 0
 	}
 
-	// lastWord берём из оригинала чтобы сохранить регистр
+	// lastWord is taken from original to preserve case
 	originalTrimmed := strings.TrimLeft(original, " ")
 	originalParts := strings.Fields(originalTrimmed)
 	lastWord := ""
@@ -77,7 +77,7 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
 			last := strings.ToUpper(parts[len(parts)-1])
 			if last == "LIMIT" || last == "OFFSET" {
-				return nil, 0 // после LIMIT/OFFSET ждём число
+				return nil, 0 // after LIMIT/OFFSET we expect a number
 			}
 			return completeFrom([]string{"LIMIT", "OFFSET"}, "")
 		}
@@ -90,12 +90,12 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	return nil, 0
 }
 
-// completeFields предлагает поля схемы с учётом вложенности
+// completeFields suggests schema fields considering nesting
 func (c *Completer) completeFields(prefix string) ([][]rune, int) {
 	allPaths := c.schema.AllPaths()
 	upperPrefix := strings.ToUpper(prefix)
 
-	// Если есть точка — предлагаем только вложенные поля нужного родителя
+	// If there's a dot - suggest only nested fields of the appropriate parent
 	if dotIdx := strings.LastIndex(upperPrefix, "."); dotIdx >= 0 {
 		var matches []string
 		for _, path := range allPaths {
@@ -106,7 +106,7 @@ func (c *Completer) completeFields(prefix string) ([][]rune, int) {
 		return completeFrom(matches, prefix)
 	}
 
-	// Иначе предлагаем все поля верхнего уровня
+	// Otherwise suggest all top-level fields
 	var topLevel []string
 	for _, path := range allPaths {
 		if !strings.Contains(path, ".") {
@@ -117,13 +117,13 @@ func (c *Completer) completeFields(prefix string) ([][]rune, int) {
 	return completeFrom(topLevel, prefix)
 }
 
-// completeFrom фильтрует список по префиксу и возвращает подходящие варианты
+// completeFrom filters the list by prefix and returns suitable options
 func completeFrom(options []string, prefix string) ([][]rune, int) {
 	upperPrefix := strings.ToUpper(prefix)
 	var matches []string
 
 	for _, opt := range options {
-		// Сравниваем регистронезависимо
+		// Compare case-insensitively
 		if strings.HasPrefix(strings.ToUpper(opt), upperPrefix) {
 			matches = append(matches, opt)
 		}
@@ -135,7 +135,7 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 
 	suffixes := make([][]rune, len(matches))
 	for i, match := range matches {
-		// Суффикс — это часть оригинального варианта после префикса
+		// Suffix is the part of the original option after the prefix
 		suffix := match[len(prefix):]
 
 		if isLower(prefix) {
@@ -148,7 +148,7 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 	return suffixes, 0
 }
 
-// toRunes конвертирует []string в [][]rune для readline
+// toRunes converts []string to [][]rune for readline
 func toRunes(options []string) [][]rune {
 	result := make([][]rune, len(options))
 	for i, opt := range options {
@@ -161,7 +161,7 @@ func isLower(s string) bool {
 	return unicode.IsLower(rune(s[0]))
 }
 
-// Newreadline создаёт конфигурацию readline с подключенным автодополнением
+// NewReadline creates a readline configuration with connected autocomplete
 func NewReadline(c *Completer) *readline.Config {
 	return &readline.Config{
 		Prompt:          "> ",

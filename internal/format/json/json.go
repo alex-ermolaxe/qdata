@@ -8,7 +8,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/format"
 )
 
-// JSONFormat — реализация Format интерфейса для JSON
+// JSONFormat - implementation of Format interface for JSON
 type JSONFormat struct{}
 
 func (j *JSONFormat) Decode(r io.Reader) ([]format.Record, error) {
@@ -37,7 +37,7 @@ func (j *JSONFormat) Extensions() []string {
 	return []string{"json"}
 }
 
-// Register регистрирует JSON формат в реестре
+// Register registers JSON format in the registry
 func Register() {
 	format.Register("json", &JSONFormat{})
 }

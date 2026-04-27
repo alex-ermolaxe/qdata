@@ -9,7 +9,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
-// Filter применяет группу условий к записям и возвращает отфильтрованные
+// Filter applies a group of conditions to records and returns filtered results
 func Filter(records []format.Record, group *parser.ConditionGroup) ([]format.Record, error) {
 	var result []format.Record
 
@@ -26,7 +26,7 @@ func Filter(records []format.Record, group *parser.ConditionGroup) ([]format.Rec
 	return result, nil
 }
 
-// matchGroup проверяет соответствие записи группе условий
+// matchGroup checks if a record matches a condition group
 func matchGroup(record format.Record, group *parser.ConditionGroup) (bool, error) {
 	if len(group.Conditions) == 0 {
 		return true, nil
@@ -54,15 +54,15 @@ func matchGroup(record format.Record, group *parser.ConditionGroup) (bool, error
 	return result, nil
 }
 
-// matchCondition проверяет соответствие записи одному условию
+// matchCondition checks if a record matches a single condition
 func matchCondition(record format.Record, condition parser.Condition) (bool, error) {
-	// EXISTS — просто проверяем наличие поля
+	// EXISTS - just check if the field exists
 	if condition.Operator == parser.OpExists {
 		_, exists := schema.GetNested(record, condition.Field)
 		return exists, nil
 	}
 
-	// Получаем значение поля
+	// Get field value
 	fieldVal, exists := schema.GetNested(record, condition.Field)
 	if !exists {
 		return false, nil
@@ -71,7 +71,7 @@ func matchCondition(record format.Record, condition parser.Condition) (bool, err
 	return compare(fieldVal, condition.Operator, condition.Value)
 }
 
-// compare сравнивает значение поля с условием
+// compare compares a field value with a condition
 func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 	switch op {
 	case parser.OpEqual:
@@ -152,34 +152,34 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 	return false, fmt.Errorf("unknown operator: %s", op)
 }
 
-// equalValues сравнивает два значения
+// equalValues compares two values
 func equalValues(a, b any) bool {
-	// Числа
+	// Numbers
 	an, aok := toFloat(a)
 	bn, bok := toFloat(b)
 	if aok && bok {
 		return an == bn
 	}
 
-	// Строки
+	// Strings
 	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 }
 
-// toStrings приводит два значения к строкам
+// toStrings converts two values to strings
 func toStrings(a, b any) (string, string, bool) {
 	as, aok := a.(string)
 	bs, bok := b.(string)
 	return as, bs, aok && bok
 }
 
-// toNumbers приводит два значения к числам
+// toNumbers converts two values to numbers
 func toNumbers(a, b any) (float64, float64, bool) {
 	an, aok := toFloat(a)
 	bn, bok := toFloat(b)
 	return an, bn, aok && bok
 }
 
-// toFloat приводит значение к float64
+// toFloat converts a value to float64
 func toFloat(v any) (float64, bool) {
 	switch val := v.(type) {
 	case float64:

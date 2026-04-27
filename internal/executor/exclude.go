@@ -5,12 +5,12 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
-// Exclude удаляет указанные поля из каждой записи
+// Exclude removes specified fields from each record
 func Exclude(records []format.Record, fields []string) []format.Record {
 	result := make([]format.Record, len(records))
 
 	for i, record := range records {
-		// Копируем запись чтобы не мутировать оригинал
+		// Copy record to avoid mutating the original
 		newRecord := copyRecord(record)
 
 		for _, field := range fields {
@@ -23,7 +23,7 @@ func Exclude(records []format.Record, fields []string) []format.Record {
 	return result
 }
 
-// copyRecord создаёт глубокую копию записи
+// copyRecord creates a deep copy of a record
 func copyRecord(record format.Record) format.Record {
 	newRecord := format.Record{}
 

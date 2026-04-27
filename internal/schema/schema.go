@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-// FieldType — тип поля
+// FieldType - field type
 type FieldType string
 
 const (
@@ -14,20 +14,20 @@ const (
 	TypeUnknown FieldType = "unknown"
 )
 
-// Field — описание одного поля схемы
+// Field - description of a schema field
 type Field struct {
-	Path     string    // полный путь: "address.city"
-	Type     FieldType // тип поля
-	Children []*Field  // вложенные поля (для объектов)
+	Path     string    // full path: "address.city"
+	Type     FieldType // field type
+	Children []*Field  // nested fields (for objects)
 }
 
-// Schema — схема данных, содержит все поля
+// Schema - data schema, contains all fields
 type Schema struct {
-	Fields []*Field          // поля верхнего уровня
-	index  map[string]*Field // индекс всех полей по пути для быстрого доступа
+	Fields []*Field          // top-level fields
+	index  map[string]*Field // index of all fields by path for fast access
 }
 
-// AllPaths возвращает все пути к полям включая вложенные
+// AllPaths returns all field paths including nested ones
 func (s *Schema) AllPaths() []string {
 	paths := make([]string, 0, len(s.index))
 	for path := range s.index {
@@ -36,21 +36,21 @@ func (s *Schema) AllPaths() []string {
 	return paths
 }
 
-// Get возвращает поле по пути
+// Get returns a field by path
 func (s *Schema) Get(path string) (*Field, bool) {
 	f, ok := s.index[path]
 	return f, ok
 }
 
-// ChildPaths возвращает пути дочерних полей для указанного префикса
-// Например для "address" вернёт ["address.city", "address.zip"]
+// ChildPaths returns paths of child fields for the specified prefix
+// For example for "address" returns ["address.city", "address.zip"]
 func (s *Schema) ChildPaths(prefix string) []string {
 	var paths []string
 	for path := range s.index {
 		if len(path) > len(prefix)+1 &&
 			path[:len(prefix)] == prefix &&
 			path[len(prefix)] == '.' {
-			// Берём только прямых потомков
+			// Take only direct children
 			rest := path[len(prefix)+1:]
 			hasNested := false
 			for p := range s.index {
@@ -69,8 +69,8 @@ func (s *Schema) ChildPaths(prefix string) []string {
 	return paths
 }
 
-// Infer анализирует записи и строит схему
-// Анализирует первые maxRecords записей для определения типов
+// Infer analyzes records and builds a schema
+// Analyzes the first maxRecords records to determine types
 func Infer(records []map[string]any, maxRecords int) *Schema {
 	schema := &Schema{
 		index: map[string]*Field{},
@@ -88,7 +88,7 @@ func Infer(records []map[string]any, maxRecords int) *Schema {
 	return schema
 }
 
-// collectFields рекурсивно обходит запись и собирает поля
+// collectFields recursively traverses a record and collects fields
 func collectFields(record map[string]any, prefix string, schema *Schema) {
 	for key, val := range record {
 		path := key
@@ -110,14 +110,14 @@ func collectFields(record map[string]any, prefix string, schema *Schema) {
 			}
 		}
 
-		// Рекурсивно обходим вложенные объекты
+		// Recursively traverse nested objects
 		if nested, ok := val.(map[string]any); ok {
 			collectFields(nested, path, schema)
 		}
 	}
 }
 
-// inferType определяет тип значения
+// inferType determines the type of a value
 func inferType(val any) FieldType {
 	if val == nil {
 		return TypeUnknown
@@ -139,7 +139,7 @@ func inferType(val any) FieldType {
 	}
 }
 
-// Print выводит схему в читаемом виде
+// Print outputs the schema in a readable format
 func (s *Schema) Print() {
 	printFields(s.Fields, s.index, 0)
 }
@@ -160,7 +160,7 @@ func printFields(fields []*Field, index map[string]*Field, depth int) {
 
 		if f.Type == TypeObject {
 			fmt.Printf("%s%s%s\n", indent, prefix, name)
-			// Собираем дочерние поля
+			// Collect child fields
 			var children []*Field
 			for path, field := range index {
 				if len(path) > len(f.Path)+1 &&

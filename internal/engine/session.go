@@ -5,25 +5,25 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
-// Session хранит состояние текущей сессии
+// Session stores the state of the current session
 type Session struct {
-	// FilePath — путь к исходному файлу
+	// FilePath - path to the source file
 	FilePath string
 
-	// Format — определённый формат файла
+	// Format - determined file format
 	Format format.Format
 
-	// Original — исходные данные (никогда не меняются)
+	// Original - source data (never changes)
 	Original []format.Record
 
-	// Current — текущий промежуточный результат
+	// Current - current intermediate result
 	Current []format.Record
 
-	// Schema — схема полей для автодополнения и валидации
+	// Schema - field schema for autocomplete and validation
 	Schema *schema.Schema
 }
 
-// NewSession создаёт новую сессию
+// NewSession creates a new session
 func NewSession(filePath string, f format.Format, records []format.Record) *Session {
 	s := &Session{
 		FilePath: filePath,
@@ -33,24 +33,24 @@ func NewSession(filePath string, f format.Format, records []format.Record) *Sess
 		Schema:   schema.Infer(records, 100),
 	}
 
-	// Копируем записи чтобы Original и Current не ссылались на одни данные
+	// Copy records so Original and Current don't reference the same data
 	copy(s.Current, records)
 
 	return s
 }
 
-// Reset сбрасывает Current к Original
+// Reset resets Current to Original
 func (s *Session) Reset() {
 	s.Current = make([]format.Record, len(s.Original))
 	copy(s.Current, s.Original)
 }
 
-// TotalRecords возвращает количество записей в текущем результате
+// TotalRecords returns the number of records in the current result
 func (s *Session) TotalRecords() int {
 	return len(s.Current)
 }
 
-// OriginalRecords возвращает количество записей в исходных данных
+// OriginalRecords returns the number of records in the source data
 func (s *Session) OriginalRecords() int {
 	return len(s.Original)
 }

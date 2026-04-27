@@ -33,7 +33,7 @@ and transforming structured data files (JSON, XML, CSV) using a simple SQL-like 
 	},
 }
 
-// Execute запускает корневую команду
+// Execute runs the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -42,10 +42,10 @@ func Execute() {
 }
 
 func init() {
-	// Регистрируем форматы
+	// Register formats
 	formatjson.Register()
 
-	// Флаги
+	// Flags
 	rootCmd.Flags().StringVarP(&filePath, "file", "f", "", "path to the data file (required)")
 	rootCmd.Flags().StringVar(&formatName, "format", "", "file format: json, xml, csv (auto-detected if not set)")
 }

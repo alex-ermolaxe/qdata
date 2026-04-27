@@ -9,7 +9,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
-// SortDirection — направление сортировки
+// SortDirection - sort direction
 type SortDirection string
 
 const (
@@ -17,7 +17,7 @@ const (
 	SortDesc SortDirection = "DESC"
 )
 
-// Sort сортирует записи по указанному полю
+// Sort sorts records by the specified field
 func Sort(records []format.Record, field string, direction SortDirection) ([]format.Record, error) {
 	result := make([]format.Record, len(records))
 	copy(result, records)
@@ -32,7 +32,7 @@ func Sort(records []format.Record, field string, direction SortDirection) ([]for
 		valI, existsI := schema.GetNested(result[i], field)
 		valJ, existsJ := schema.GetNested(result[j], field)
 
-		// Записи без поля помещаем в конец
+		// Records without the field are placed at the end
 		if !existsI && !existsJ {
 			return false
 		}
@@ -62,23 +62,23 @@ func Sort(records []format.Record, field string, direction SortDirection) ([]for
 	return result, nil
 }
 
-// lessValues сравнивает два значения для сортировки
+// lessValues compares two values for sorting
 func lessValues(a, b any) (bool, error) {
-	// Числа
+	// Numbers
 	an, aok := toFloat(a)
 	bn, bok := toFloat(b)
 	if aok && bok {
 		return an < bn, nil
 	}
 
-	// Строки
+	// Strings
 	as, aok := a.(string)
 	bs, bok := b.(string)
 	if aok && bok {
 		return strings.ToLower(as) < strings.ToLower(bs), nil
 	}
 
-	// Разные типы — не можем сравнить
+	// Different types - cannot compare
 	return false, fmt.Errorf(
 		"cannot compare values of different types: %T and %T", a, b,
 	)

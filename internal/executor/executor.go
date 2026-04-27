@@ -7,11 +7,11 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/format"
 )
 
-// Show выводит записи в терминал
+// Show outputs records to terminal
 func Show(records []format.Record, limit int, offset int) error {
 	total := len(records)
 
-	// Применяем offset
+	// Apply offset
 	if offset >= total {
 		fmt.Println("[]")
 		fmt.Printf("── 0 of %d records ──\n", total)
@@ -19,14 +19,14 @@ func Show(records []format.Record, limit int, offset int) error {
 	}
 	records = records[offset:]
 
-	// Применяем limit
+	// Apply limit
 	shown := len(records)
 	if limit > 0 && limit < shown {
 		records = records[:limit]
 		shown = limit
 	}
 
-	// Сериализуем в JSON с отступами
+	// Serialize to indented JSON
 	data, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to serialize records: %w", err)

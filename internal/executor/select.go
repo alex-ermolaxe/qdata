@@ -5,9 +5,9 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
-// Select оставляет в каждой записи только указанные поля
+// Select keeps only the specified fields in each record
 func Select(records []format.Record, fields []string) []format.Record {
-	// SELECT * — возвращаем всё как есть
+	// SELECT * - return everything as is
 	if len(fields) == 1 && fields[0] == "*" {
 		return records
 	}

@@ -6,12 +6,12 @@ import (
 	"strings"
 )
 
-// Parse разбирает строку условия в ConditionGroup
-// Например: "age > 30 AND status = "active""
+// Parse parses a condition string into a ConditionGroup
+// Example: "age > 30 AND status = \"active\""
 func Parse(input string) (*ConditionGroup, error) {
 	group := &ConditionGroup{}
 
-	// Разбиваем по AND/OR сохраняя операторы
+	// Split by AND/OR while preserving operators
 	parts, operators, err := splitByLogical(input)
 	if err != nil {
 		return nil, err
@@ -30,12 +30,12 @@ func Parse(input string) (*ConditionGroup, error) {
 	return group, nil
 }
 
-// splitByLogical разбивает строку по AND/OR
+// splitByLogical splits a string by AND/OR
 func splitByLogical(input string) ([]string, []LogicalOp, error) {
 	var parts []string
 	var operators []LogicalOp
 
-	// Токенизируем входную строку
+	// Tokenize input string
 	tokens := tokenize(input)
 	current := []string{}
 
@@ -60,8 +60,8 @@ func splitByLogical(input string) ([]string, []LogicalOp, error) {
 	return parts, operators, nil
 }
 
-// parseCondition разбирает одно условие
-// Например: age > 30, name ~ "john", status IN ["active", "pending"]
+// parseCondition parses a single condition
+// Example: age > 30, name ~ "john", status IN ["active", "pending"]
 func parseCondition(input string) (*Condition, error) {
 	tokens := tokenize(input)
 	if len(tokens) < 2 {
@@ -70,7 +70,7 @@ func parseCondition(input string) (*Condition, error) {
 
 	field := tokens[0]
 
-	// EXISTS — унарный оператор
+	// EXISTS - unary operator
 	if strings.ToUpper(tokens[1]) == "EXISTS" {
 		return &Condition{
 			Field:    field,
@@ -87,7 +87,7 @@ func parseCondition(input string) (*Condition, error) {
 		return nil, err
 	}
 
-	// IN — значение это список
+	// IN - value is a list
 	if op == OpIn {
 		values, err := parseList(tokens[2:])
 		if err != nil {
@@ -112,7 +112,7 @@ func parseCondition(input string) (*Condition, error) {
 	}, nil
 }
 
-// parseOperator разбирает строку оператора
+// parseOperator parses an operator string
 func parseOperator(s string) (Operator, error) {
 	switch s {
 	case "=":
@@ -142,14 +142,14 @@ func parseOperator(s string) (Operator, error) {
 	}
 }
 
-// parseValue разбирает значение условия
+// parseValue parses a condition value
 func parseValue(s string) (any, error) {
-	// Строка в кавычках
+	// String in quotes
 	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
 		return strings.Trim(s, `"`), nil
 	}
 
-	// Булево значение
+	// Boolean value
 	if strings.ToLower(s) == "true" {
 		return true, nil
 	}
@@ -157,16 +157,16 @@ func parseValue(s string) (any, error) {
 		return false, nil
 	}
 
-	// Число
+	// Number
 	if num, err := strconv.ParseFloat(s, 64); err == nil {
 		return num, nil
 	}
 
-	// Строка без кавычек
+	// String without quotes
 	return s, nil
 }
 
-// parseList разбирает список значений ["a", "b", "c"]
+// parseList parses a list of values ["a", "b", "c"]
 func parseList(tokens []string) ([]any, error) {
 	joined := strings.Join(tokens, " ")
 	joined = strings.TrimSpace(joined)
@@ -190,7 +190,7 @@ func parseList(tokens []string) ([]any, error) {
 	return values, nil
 }
 
-// tokenize разбивает строку на токены с учётом строк в кавычках и операторов
+// tokenize splits a string into tokens considering quoted strings and operators
 func tokenize(input string) []string {
 	var tokens []string
 	var current strings.Builder
@@ -202,7 +202,7 @@ func tokenize(input string) []string {
 	for i < len(runes) {
 		r := runes[i]
 
-		// Обрабатываем строки в кавычках
+		// Handle quoted strings
 		if r == '"' {
 			inQuotes = !inQuotes
 			current.WriteRune(r)
@@ -216,7 +216,7 @@ func tokenize(input string) []string {
 			continue
 		}
 
-		// Пробел — разделитель токенов
+		// Space - token separator
 		if r == ' ' {
 			if current.Len() > 0 {
 				tokens = append(tokens, current.String())
@@ -226,7 +226,7 @@ func tokenize(input string) []string {
 			continue
 		}
 
-		// Двухсимвольные операторы: !=, >=, <=, !~
+		// Two-character operators: !=, >=, <=, !~
 		if i+1 < len(runes) {
 			two := string(runes[i : i+2])
 			if two == "!=" || two == ">=" || two == "<=" || two == "!~" {
@@ -240,7 +240,7 @@ func tokenize(input string) []string {
 			}
 		}
 
-		// Односимвольные операторы: =, >, <, ~, ^, $
+		// Single-character operators: =, >, <, ~, ^, $
 		if r == '=' || r == '>' || r == '<' || r == '~' || r == '^' || r == '$' {
 			if current.Len() > 0 {
 				tokens = append(tokens, current.String())

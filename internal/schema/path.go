@@ -2,20 +2,20 @@ package schema
 
 import "strings"
 
-// Split разбивает путь к полю на части
+// Split splits a field path into parts
 // "address.city" -> ["address", "city"]
 // "name" -> ["name"]
 func Split(path string) []string {
 	return strings.Split(path, ".")
 }
 
-// Join собирает путь из частей
+// Join combines path parts into a path
 // ["address", "city"] -> "address.city"
 func Join(parts []string) string {
 	return strings.Join(parts, ".")
 }
 
-// GetNested извлекает значение из вложенной map по пути
+// GetNested extracts a value from a nested map by path
 // path: "address.city", record: {"address": {"city": "Moscow"}} -> "Moscow", true
 func GetNested(record map[string]any, path string) (any, bool) {
 	parts := Split(path)
@@ -27,12 +27,12 @@ func GetNested(record map[string]any, path string) (any, bool) {
 			return nil, false
 		}
 
-		// Если это последняя часть пути — возвращаем значение
+		// If this is the last part of the path - return the value
 		if i == len(parts)-1 {
 			return val, true
 		}
 
-		// Иначе пробуем спуститься глубже
+		// Otherwise try to descend deeper
 		nested, ok := val.(map[string]any)
 		if !ok {
 			return nil, false
@@ -43,8 +43,8 @@ func GetNested(record map[string]any, path string) (any, bool) {
 	return nil, false
 }
 
-// SetNested устанавливает значение в вложенной map по пути
-// Создаёт промежуточные map если они не существуют
+// SetNested sets a value in a nested map by path
+// Creates intermediate maps if they don't exist
 func SetNested(record map[string]any, path string, value any) {
 	parts := Split(path)
 	current := record
@@ -64,7 +64,7 @@ func SetNested(record map[string]any, path string, value any) {
 	}
 }
 
-// DeleteNested удаляет поле из вложенной map по пути
+// DeleteNested deletes a field from a nested map by path
 func DeleteNested(record map[string]any, path string) {
 	parts := Split(path)
 	current := record

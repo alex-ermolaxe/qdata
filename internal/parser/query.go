@@ -1,6 +1,6 @@
 package parser
 
-// Operator — оператор сравнения
+// Operator - comparison operator
 type Operator string
 
 const (
@@ -18,7 +18,7 @@ const (
 	OpExists         Operator = "EXISTS"
 )
 
-// LogicalOp — логический оператор между условиями
+// LogicalOp - logical operator between conditions
 type LogicalOp string
 
 const (
@@ -26,16 +26,16 @@ const (
 	LogicalOr  LogicalOp = "OR"
 )
 
-// Condition — одно условие фильтрации
-// Например: age > 30
+// Condition - a single filter condition
+// Example: age > 30
 type Condition struct {
 	Field    string
 	Operator Operator
 	Value    any // string, float64, []any
 }
 
-// ConditionGroup — группа условий связанных логическим оператором
+// ConditionGroup - a group of conditions linked by a logical operator
 type ConditionGroup struct {
 	Conditions []Condition
-	Operators  []LogicalOp // операторы между условиями, len = len(Conditions) - 1
+	Operators  []LogicalOp // operators between conditions, len = len(Conditions) - 1
 }

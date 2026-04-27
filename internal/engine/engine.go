@@ -16,14 +16,14 @@ import (
 
 const version = "1.0"
 
-// Engine — основной движок приложения
+// Engine - main application engine
 type Engine struct {
 	session *Session
 }
 
-// New создаёт новый Engine, загружает файл и строит сессию
+// New creates a new Engine, loads a file and builds a session
 func New(filePath string, formatName string) (*Engine, error) {
-	// Определяем формат
+	// Determine format
 	var f format.Format
 	var err error
 
@@ -36,39 +36,39 @@ func New(filePath string, formatName string) (*Engine, error) {
 		return nil, fmt.Errorf("failed to determine format: %w", err)
 	}
 
-	// Открываем файл
+	// Open file
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
-	// Декодируем данные
+	// Decode data
 	records, err := f.Decode(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode file: %w", err)
 	}
 
-	// Создаём сессию
+	// Create session
 	session := NewSession(filePath, f, records)
 
 	return &Engine{session: session}, nil
 }
 
-// Run запускает интерактивную REPL сессию
+// Run starts an interactive REPL session
 func (e *Engine) Run() error {
-	// Создаём автодополнение
+	// Create autocomplete
 	c := completer.New(e.session.Schema)
 	config := completer.NewReadline(c)
 
-	// Инициализируем readline
+	// Initialize readline
 	rl, err := readline.NewEx(config)
 	if err != nil {
 		return fmt.Errorf("failed to initialize readline: %w", err)
 	}
 	defer rl.Close()
 
-	// Приветственное сообщение
+	// Welcome message
 	fileName := filepath.Base(e.session.FilePath)
 	fmt.Printf("qdata v%s | file: %s | records: %d\n\n",
 		version,
@@ -76,11 +76,11 @@ func (e *Engine) Run() error {
 		e.session.OriginalRecords(),
 	)
 
-	// REPL цикл
+	// REPL loop
 	for {
 		line, err := rl.Readline()
 		if err != nil {
-			// Ctrl+D или Ctrl+C
+			// Ctrl+D or Ctrl+C
 			if err == readline.ErrInterrupt || err == io.EOF {
 				fmt.Println("\nBye!")
 				return nil
@@ -93,14 +93,14 @@ func (e *Engine) Run() error {
 			continue
 		}
 
-		// Обрабатываем команду
+		// Process command
 		if err := e.handleCommand(input); err != nil {
 			fmt.Printf("error: %s\n", err)
 		}
 	}
 }
 
-// handleCommand обрабатывает введённую команду
+// handleCommand processes the entered command
 func (e *Engine) handleCommand(input string) error {
 	parts := strings.Fields(input)
 	if len(parts) == 0 {
@@ -181,7 +181,7 @@ func (e *Engine) handleSelect(args string) error {
 	return nil
 }
 
-// splitFields разбивает строку полей через запятую
+// splitFields splits field string by comma
 func splitFields(args string) []string {
 	parts := strings.Split(args, ",")
 	fields := make([]string, 0, len(parts))
@@ -198,7 +198,7 @@ func (e *Engine) handleShow(args string) error {
 	limit := 0
 	offset := 0
 
-	// Разбираем аргументы SHOW LIMIT 10 OFFSET 20
+	// Parse SHOW LIMIT 10 OFFSET 20 arguments
 	parts := strings.Fields(strings.ToUpper(args))
 	for i := 0; i < len(parts); i++ {
 		switch parts[i] {
@@ -228,7 +228,7 @@ func (e *Engine) handleSave(args string) error {
 	fileName := ""
 	formatName := ""
 
-	// Разбираем аргументы: SAVE AS <filename> FORMAT <format>
+	// Parse SAVE AS <filename> FORMAT <format> arguments
 	parts := strings.Fields(args)
 	for i := 0; i < len(parts); i++ {
 		switch strings.ToUpper(parts[i]) {
@@ -247,7 +247,7 @@ func (e *Engine) handleSave(args string) error {
 		}
 	}
 
-	// Определяем формат
+	// Determine format
 	f := e.session.Format
 	if formatName != "" {
 		var err error
