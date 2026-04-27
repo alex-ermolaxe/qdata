@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/alex-ermolaxe/qdata/internal/engine"
+	formatcsv "github.com/alex-ermolaxe/qdata/internal/format/csv"
 	formatjson "github.com/alex-ermolaxe/qdata/internal/format/json"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +45,7 @@ func Execute() {
 func init() {
 	// Register formats
 	formatjson.Register()
+	formatcsv.Register()
 
 	// Flags
 	rootCmd.Flags().StringVarP(&filePath, "file", "f", "", "path to the data file (required)")
