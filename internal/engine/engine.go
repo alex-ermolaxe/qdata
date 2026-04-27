@@ -133,6 +133,8 @@ func (e *Engine) handleCommand(input string) error {
 		return e.handleSelect(args)
 	case "SHOW":
 		return e.handleShow(args)
+	case "SAVE":
+		return e.handleSave(args)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 	}
@@ -210,4 +212,40 @@ func (e *Engine) handleShow(args string) error {
 	}
 
 	return executor.Show(e.session.Current, limit, offset)
+}
+
+func (e *Engine) handleSave(args string) error {
+	fileName := ""
+	formatName := ""
+
+	// Разбираем аргументы: SAVE AS <filename> FORMAT <format>
+	parts := strings.Fields(args)
+	for i := 0; i < len(parts); i++ {
+		switch strings.ToUpper(parts[i]) {
+		case "AS":
+			if i+1 >= len(parts) {
+				return fmt.Errorf("AS requires a filename")
+			}
+			fileName = parts[i+1]
+			i++
+		case "FORMAT":
+			if i+1 >= len(parts) {
+				return fmt.Errorf("FORMAT requires a format name")
+			}
+			formatName = parts[i+1]
+			i++
+		}
+	}
+
+	// Определяем формат
+	f := e.session.Format
+	if formatName != "" {
+		var err error
+		f, err = format.Get(formatName)
+		if err != nil {
+			return fmt.Errorf("unknown format: %s", formatName)
+		}
+	}
+
+	return executor.Save(e.session.Current, e.session.FilePath, fileName, f)
 }
