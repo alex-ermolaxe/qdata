@@ -190,25 +190,69 @@ func parseList(tokens []string) ([]any, error) {
 	return values, nil
 }
 
-// tokenize разбивает строку на токены с учётом строк в кавычках
+// tokenize разбивает строку на токены с учётом строк в кавычках и операторов
 func tokenize(input string) []string {
 	var tokens []string
 	var current strings.Builder
 	inQuotes := false
 
-	for _, r := range input {
-		switch {
-		case r == '"':
+	runes := []rune(input)
+	i := 0
+
+	for i < len(runes) {
+		r := runes[i]
+
+		// Обрабатываем строки в кавычках
+		if r == '"' {
 			inQuotes = !inQuotes
 			current.WriteRune(r)
-		case r == ' ' && !inQuotes:
+			i++
+			continue
+		}
+
+		if inQuotes {
+			current.WriteRune(r)
+			i++
+			continue
+		}
+
+		// Пробел — разделитель токенов
+		if r == ' ' {
 			if current.Len() > 0 {
 				tokens = append(tokens, current.String())
 				current.Reset()
 			}
-		default:
-			current.WriteRune(r)
+			i++
+			continue
 		}
+
+		// Двухсимвольные операторы: !=, >=, <=, !~
+		if i+1 < len(runes) {
+			two := string(runes[i : i+2])
+			if two == "!=" || two == ">=" || two == "<=" || two == "!~" {
+				if current.Len() > 0 {
+					tokens = append(tokens, current.String())
+					current.Reset()
+				}
+				tokens = append(tokens, two)
+				i += 2
+				continue
+			}
+		}
+
+		// Односимвольные операторы: =, >, <, ~, ^, $
+		if r == '=' || r == '>' || r == '<' || r == '~' || r == '^' || r == '$' {
+			if current.Len() > 0 {
+				tokens = append(tokens, current.String())
+				current.Reset()
+			}
+			tokens = append(tokens, string(r))
+			i++
+			continue
+		}
+
+		current.WriteRune(r)
+		i++
 	}
 
 	if current.Len() > 0 {

@@ -73,6 +73,18 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		if len(parts) >= 3 && strings.ToUpper(parts[len(parts)-2]) == "FORMAT" {
 			return completeFrom(saveFormats, lastWord)
 		}
+	case "SHOW":
+		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
+			last := strings.ToUpper(parts[len(parts)-1])
+			if last == "LIMIT" || last == "OFFSET" {
+				return nil, 0 // после LIMIT/OFFSET ждём число
+			}
+			return completeFrom([]string{"LIMIT", "OFFSET"}, "")
+		}
+		if !strings.HasSuffix(input, " ") && len(parts) >= 2 {
+			return completeFrom([]string{"LIMIT", "OFFSET"}, lastWord)
+		}
+		return completeFrom([]string{"LIMIT", "OFFSET"}, "")
 	}
 
 	return nil, 0

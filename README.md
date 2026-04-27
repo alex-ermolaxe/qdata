@@ -131,7 +131,7 @@ SELECT *
 ### Notes
 
 - Nested fields such as `address.city` are extracted and placed into the result.
-- Use the `--flat` flag at startup to flatten nested fields into dot-notation keys (e.g. `"address.city": "Moscow"`). Without the flag, the original nested structure is preserved.
+- The original nested structure is preserved in the output.
 
 ### Output
 
@@ -341,17 +341,10 @@ Fields in current dataset:
 
 ## EXIT — Quit session
 
-Closes the interactive session without saving.
+Closes the interactive session.
 
 ```
 EXIT
-```
-
-If there are unsaved changes, a confirmation prompt is shown:
-
-```
-> EXIT
-You have unsaved changes. Exit anyway? [y/N]:
 ```
 
 ---
