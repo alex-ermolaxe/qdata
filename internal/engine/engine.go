@@ -135,6 +135,16 @@ func (e *Engine) handleCommand(input string) error {
 		return e.handleShow(args)
 	case "SAVE":
 		return e.handleSave(args)
+	case "EXCLUDE":
+		if args == "" {
+			return fmt.Errorf("EXCLUDE requires field names")
+		}
+		return e.handleExclude(args)
+	case "SORT":
+		if args == "" {
+			return fmt.Errorf("SORT requires a field name")
+		}
+		return e.handleSort(args)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 	}
@@ -248,4 +258,41 @@ func (e *Engine) handleSave(args string) error {
 	}
 
 	return executor.Save(e.session.Current, e.session.FilePath, fileName, f)
+}
+
+func (e *Engine) handleExclude(args string) error {
+	fields := splitFields(args)
+
+	e.session.Current = executor.Exclude(e.session.Current, fields)
+	fmt.Printf("✓ Applied EXCLUDE to %d records\n", e.session.TotalRecords())
+
+	return nil
+}
+
+func (e *Engine) handleSort(args string) error {
+	parts := strings.Fields(args)
+
+	field := parts[0]
+	direction := executor.SortAsc
+
+	if len(parts) > 1 {
+		switch strings.ToUpper(parts[1]) {
+		case "ASC":
+			direction = executor.SortAsc
+		case "DESC":
+			direction = executor.SortDesc
+		default:
+			return fmt.Errorf("invalid sort direction: %s, expected ASC or DESC", parts[1])
+		}
+	}
+
+	sorted, err := executor.Sort(e.session.Current, field, direction)
+	if err != nil {
+		return err
+	}
+
+	e.session.Current = sorted
+	fmt.Printf("✓ Sorted %d records by %q %s\n", e.session.TotalRecords(), field, direction)
+
+	return nil
 }
