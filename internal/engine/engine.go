@@ -14,7 +14,7 @@ import (
 	"github.com/chzyer/readline"
 )
 
-const version = "1.0"
+const version = "1.1"
 
 // Engine - main application engine
 type Engine struct {
