@@ -7,7 +7,6 @@ import (
 
 // Select keeps only the specified fields in each record
 func Select(records []format.Record, fields []string) []format.Record {
-	// SELECT * - return everything as is
 	if len(fields) == 1 && fields[0] == "*" {
 		return records
 	}
@@ -15,7 +14,7 @@ func Select(records []format.Record, fields []string) []format.Record {
 	result := make([]format.Record, len(records))
 
 	for i, record := range records {
-		newRecord := format.Record{}
+		newRecord := format.NewRecord()
 
 		for _, field := range fields {
 			val, exists := schema.GetNested(record, field)

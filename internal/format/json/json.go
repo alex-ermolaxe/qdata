@@ -6,17 +6,24 @@ import (
 	"io"
 
 	"github.com/alex-ermolaxe/qdata/internal/format"
+	"github.com/iancoleman/orderedmap"
 )
 
-// JSONFormat - implementation of Format interface for JSON
 type JSONFormat struct{}
 
+// JSONFormat - implementation of Format interface for JSON
 func (j *JSONFormat) Decode(r io.Reader) ([]format.Record, error) {
-	var records []format.Record
+	// Decode into a slice of OrderedMap
+	var raw []orderedmap.OrderedMap
 
 	decoder := gojson.NewDecoder(r)
-	if err := decoder.Decode(&records); err != nil {
+	if err := decoder.Decode(&raw); err != nil {
 		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+	}
+
+	records := make([]format.Record, len(raw))
+	for i := range raw {
+		records[i] = &raw[i]
 	}
 
 	return records, nil
@@ -37,7 +44,6 @@ func (j *JSONFormat) Extensions() []string {
 	return []string{"json"}
 }
 
-// Register registers JSON format in the registry
 func Register() {
 	format.Register("json", &JSONFormat{})
 }

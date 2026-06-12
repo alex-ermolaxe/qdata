@@ -64,21 +64,18 @@ func Sort(records []format.Record, field string, direction SortDirection) ([]for
 
 // lessValues compares two values for sorting
 func lessValues(a, b any) (bool, error) {
-	// Numbers
 	an, aok := toFloat(a)
 	bn, bok := toFloat(b)
 	if aok && bok {
 		return an < bn, nil
 	}
 
-	// Strings
 	as, aok := a.(string)
 	bs, bok := b.(string)
 	if aok && bok {
 		return strings.ToLower(as) < strings.ToLower(bs), nil
 	}
 
-	// Different types - cannot compare
 	return false, fmt.Errorf(
 		"cannot compare values of different types: %T and %T", a, b,
 	)

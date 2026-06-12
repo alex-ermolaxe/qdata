@@ -11,7 +11,8 @@
       "zip": "101000",
       "street": "Arbat 12"
     },
-    "tags": ["admin", "user"]
+    "tags": ["admin", "user"],
+    "preferredIde": "IntelliJ IDEA"
   },
   {
     "id": 2,
@@ -25,7 +26,8 @@
       "zip": "190000",
       "street": "Nevsky 45"
     },
-    "tags": ["user"]
+    "tags": ["user"],
+    "preferredIde": "Goland"
   },
   {
     "id": 3,
@@ -39,7 +41,8 @@
       "zip": "102000",
       "street": "Tverskaya 8"
     },
-    "tags": ["user", "moderator"]
+    "tags": ["user", "moderator"],
+    "preferredIde": "Visual Studio"
   },
   {
     "id": 4,
@@ -53,7 +56,8 @@
       "zip": "420000",
       "street": "Baumana 3"
     },
-    "tags": ["user"]
+    "tags": ["user"],
+    "preferredIde": "Zed"
   },
   {
     "id": 5,
@@ -67,6 +71,7 @@
       "zip": "103000",
       "street": "Leninsky 22"
     },
-    "tags": ["user", "moderator"]
+    "tags": ["user", "moderator"],
+    "preferredIde": "VS Code"
   }
 ]

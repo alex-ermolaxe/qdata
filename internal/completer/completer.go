@@ -123,7 +123,6 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 	var matches []string
 
 	for _, opt := range options {
-		// Compare case-insensitively
 		if strings.HasPrefix(strings.ToUpper(opt), upperPrefix) {
 			matches = append(matches, opt)
 		}
@@ -135,14 +134,15 @@ func completeFrom(options []string, prefix string) ([][]rune, int) {
 
 	suffixes := make([][]rune, len(matches))
 	for i, match := range matches {
-		// Suffix is the part of the original option after the prefix
-		suffix := match[len(prefix):]
-
-		if isLower(prefix) {
-			suffix = strings.ToLower(suffix)
+		if match == strings.ToUpper(match) {
+			suffix := match[len(prefix):]
+			if isLower(prefix) {
+				suffix = strings.ToLower(suffix)
+			}
+			suffixes[i] = []rune(suffix)
+		} else {
+			suffixes[i] = []rune(match[len(prefix):])
 		}
-
-		suffixes[i] = []rune(suffix)
 	}
 
 	return suffixes, 0

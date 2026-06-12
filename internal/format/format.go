@@ -5,10 +5,16 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+
+	"github.com/iancoleman/orderedmap"
 )
 
 // Record - basic type for a single record
-type Record = map[string]any
+type Record = *orderedmap.OrderedMap
+
+func NewRecord() Record {
+	return orderedmap.New()
+}
 
 // Format - interface for working with a specific file format.
 // To add a new format - just implement this interface.

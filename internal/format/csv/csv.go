@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/alex-ermolaxe/qdata/internal/format"
+	"github.com/iancoleman/orderedmap"
 )
 
 // CSVFormat is an implementation of Format interface for CSV
@@ -39,9 +40,10 @@ func (c *CSVFormat) Decode(r io.Reader) ([]format.Record, error) {
 			)
 		}
 
-		record := format.Record{}
+		// Use orderedmap to preserve field order from header
+		record := orderedmap.New()
 		for i, header := range headers {
-			record[header] = parseValue(row[i])
+			record.Set(header, parseValue(row[i]))
 		}
 
 		records = append(records, record)
@@ -58,11 +60,8 @@ func (c *CSVFormat) Encode(w io.Writer, records []format.Record) error {
 	writer := gcsv.NewWriter(w)
 	defer writer.Flush()
 
-	// Collect headers from the first record
-	headers := make([]string, 0)
-	for key := range records[0] {
-		headers = append(headers, key)
-	}
+	// Take headers from the first record — order is preserved in orderedmap
+	headers := records[0].Keys()
 
 	// Write header
 	if err := writer.Write(headers); err != nil {
@@ -73,7 +72,7 @@ func (c *CSVFormat) Encode(w io.Writer, records []format.Record) error {
 	for _, record := range records {
 		row := make([]string, len(headers))
 		for i, header := range headers {
-			val, ok := record[header]
+			val, ok := record.Get(header)
 			if !ok {
 				row[i] = ""
 				continue
@@ -104,12 +103,10 @@ func Register() {
 
 // parseValue attempts to determine the value type from a string
 func parseValue(s string) any {
-	// Empty string
 	if s == "" {
 		return nil
 	}
 
-	// Boolean value
 	if s == "true" {
 		return true
 	}
@@ -117,12 +114,10 @@ func parseValue(s string) any {
 		return false
 	}
 
-	// Number
 	if num, err := strconv.ParseFloat(s, 64); err == nil {
 		return num
 	}
 
-	// String
 	return s
 }
 
@@ -134,7 +129,6 @@ func valueToString(val any) string {
 
 	switch v := val.(type) {
 	case float64:
-		// Remove unnecessary zeros: 87.500000 -> 87.5
 		return strconv.FormatFloat(v, 'f', -1, 64)
 	case bool:
 		return strconv.FormatBool(v)

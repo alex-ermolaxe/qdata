@@ -1,6 +1,6 @@
-id,name,age,email,status,score,city,zip,street
-1,Alice Johnson,32,alice@example.com,active,87.5,Moscow,101000,Arbat 12
-2,Bob Smith,25,bob@example.com,inactive,62.0,Saint Petersburg,190000,Nevsky 45
-3,Carol White,41,carol@example.com,active,91.0,Moscow,102000,Tverskaya 8
-4,David Brown,19,david@example.com,active,45.5,Kazan,420000,Baumana 3
-5,Elena Petrova,38,elena@example.com,inactive,78.0,Moscow,103000,Leninsky 22
+id,name,age,email,status,score,city,zip,street,tags,preferredIde
+1,Alice Johnson,32,alice@example.com,active,87.5,Moscow,101000,Arbat 12,"admin,user",IntelliJ IDEA
+2,Bob Smith,25,bob@example.com,inactive,62.0,Saint Petersburg,190000,Nevsky 45,user,Goland
+3,Carol White,41,carol@example.com,active,91.0,Moscow,102000,Tverskaya 8,"user,moderator",Visual Studio
+4,David Brown,19,david@example.com,active,45.5,Kazan,420000,Baumana 3,user,Zed
+5,Elena Petrova,38,elena@example.com,inactive,78.0,Moscow,103000,Leninsky 22,"user,moderator",VS Code

@@ -1,6 +1,12 @@
 package schema
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/alex-ermolaxe/qdata/internal/format"
+	"github.com/iancoleman/orderedmap"
+)
 
 // FieldType - field type
 type FieldType string
@@ -71,7 +77,7 @@ func (s *Schema) ChildPaths(prefix string) []string {
 
 // Infer analyzes records and builds a schema
 // Analyzes the first maxRecords records to determine types
-func Infer(records []map[string]any, maxRecords int) *Schema {
+func Infer(records []format.Record, maxRecords int) *Schema {
 	schema := &Schema{
 		index: map[string]*Field{},
 	}
@@ -89,8 +95,10 @@ func Infer(records []map[string]any, maxRecords int) *Schema {
 }
 
 // collectFields recursively traverses a record and collects fields
-func collectFields(record map[string]any, prefix string, schema *Schema) {
-	for key, val := range record {
+func collectFields(record format.Record, prefix string, schema *Schema) {
+	for _, key := range record.Keys() {
+		val, _ := record.Get(key)
+
 		path := key
 		if prefix != "" {
 			path = prefix + "." + key
@@ -110,9 +118,11 @@ func collectFields(record map[string]any, prefix string, schema *Schema) {
 			}
 		}
 
-		// Recursively traverse nested objects
-		if nested, ok := val.(map[string]any); ok {
+		switch nested := val.(type) {
+		case *orderedmap.OrderedMap:
 			collectFields(nested, path, schema)
+		case orderedmap.OrderedMap:
+			collectFields(&nested, path, schema)
 		}
 	}
 }
@@ -132,7 +142,9 @@ func inferType(val any) FieldType {
 		return TypeBool
 	case []any:
 		return TypeArray
-	case map[string]any:
+	case orderedmap.OrderedMap:
+		return TypeObject
+	case *orderedmap.OrderedMap:
 		return TypeObject
 	default:
 		return TypeUnknown
@@ -145,10 +157,10 @@ func (s *Schema) Print() {
 }
 
 func printFields(fields []*Field, index map[string]*Field, depth int) {
-	indent := ""
+	var indent strings.Builder
 	prefix := ""
-	for i := 0; i < depth; i++ {
-		indent += "  "
+	for range depth {
+		indent.WriteString("  ")
 	}
 	if depth > 0 {
 		prefix = "└─ "
@@ -159,7 +171,7 @@ func printFields(fields []*Field, index map[string]*Field, depth int) {
 		name := parts[len(parts)-1]
 
 		if f.Type == TypeObject {
-			fmt.Printf("%s%s%s\n", indent, prefix, name)
+			fmt.Printf("%s%s%s\n", indent.String(), prefix, name)
 			// Collect child fields
 			var children []*Field
 			for path, field := range index {
@@ -174,7 +186,7 @@ func printFields(fields []*Field, index map[string]*Field, depth int) {
 			}
 			printFields(children, index, depth+1)
 		} else {
-			fmt.Printf("%s%s%-20s %s\n", indent, prefix, name, f.Type)
+			fmt.Printf("%s%s%-20s %s\n", indent.String(), prefix, name, f.Type)
 		}
 	}
 }
