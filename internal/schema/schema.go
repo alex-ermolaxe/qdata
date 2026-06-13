@@ -48,33 +48,6 @@ func (s *Schema) Get(path string) (*Field, bool) {
 	return f, ok
 }
 
-// ChildPaths returns paths of child fields for the specified prefix
-// For example for "address" returns ["address.city", "address.zip"]
-func (s *Schema) ChildPaths(prefix string) []string {
-	var paths []string
-	for path := range s.index {
-		if len(path) > len(prefix)+1 &&
-			path[:len(prefix)] == prefix &&
-			path[len(prefix)] == '.' {
-			// Take only direct children
-			rest := path[len(prefix)+1:]
-			hasNested := false
-			for p := range s.index {
-				if len(p) > len(path)+1 &&
-					p[:len(path)] == path &&
-					p[len(path)] == '.' {
-					hasNested = true
-					break
-				}
-			}
-			_ = hasNested
-			_ = rest
-			paths = append(paths, path)
-		}
-	}
-	return paths
-}
-
 // Infer analyzes records and builds a schema
 // Analyzes the first maxRecords records to determine types
 func Infer(records []format.Record, maxRecords int) *Schema {
@@ -92,6 +65,11 @@ func Infer(records []format.Record, maxRecords int) *Schema {
 	}
 
 	return schema
+}
+
+// Print outputs the schema in a readable format
+func (s *Schema) Print() {
+	printFields(s.Fields, s.index, 0)
 }
 
 // collectFields recursively traverses a record and collects fields
@@ -149,11 +127,6 @@ func inferType(val any) FieldType {
 	default:
 		return TypeUnknown
 	}
-}
-
-// Print outputs the schema in a readable format
-func (s *Schema) Print() {
-	printFields(s.Fields, s.index, 0)
 }
 
 func printFields(fields []*Field, index map[string]*Field, depth int) {

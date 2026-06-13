@@ -90,6 +90,17 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	return nil, 0
 }
 
+// NewReadline creates a readline configuration with connected autocomplete
+func NewReadline(c *Completer) *readline.Config {
+	return &readline.Config{
+		Prompt:          "> ",
+		AutoComplete:    c,
+		HistoryLimit:    100,
+		InterruptPrompt: "^C",
+		EOFPrompt:       "exit",
+	}
+}
+
 // completeFields suggests schema fields considering nesting
 func (c *Completer) completeFields(prefix string) ([][]rune, int) {
 	allPaths := c.schema.AllPaths()
@@ -159,15 +170,4 @@ func toRunes(options []string) [][]rune {
 
 func isLower(s string) bool {
 	return unicode.IsLower(rune(s[0]))
-}
-
-// NewReadline creates a readline configuration with connected autocomplete
-func NewReadline(c *Completer) *readline.Config {
-	return &readline.Config{
-		Prompt:          "> ",
-		AutoComplete:    c,
-		HistoryLimit:    100,
-		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
-	}
 }
