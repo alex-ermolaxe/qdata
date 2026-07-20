@@ -43,6 +43,12 @@ func NewSession(filePath string, f format.Format, records []format.Record) *Sess
 func (s *Session) Reset() {
 	s.Current = make([]format.Record, len(s.Original))
 	copy(s.Current, s.Original)
+	s.UpdateSchema()
+}
+
+// UpdateSchema rebuilds the schema based on current records
+func (s *Session) UpdateSchema() {
+	s.Schema = schema.Infer(s.Current, 100)
 }
 
 // TotalRecords returns the number of records in the current result

@@ -11,6 +11,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/parser"
+	"github.com/alex-ermolaxe/qdata/internal/schema"
 	"github.com/alex-ermolaxe/qdata/internal/version"
 	"github.com/chzyer/readline"
 )
@@ -56,8 +57,10 @@ func New(filePath string, formatName string) (*Engine, error) {
 
 // Run starts an interactive REPL session
 func (e *Engine) Run() error {
-	// Create autocomplete
-	c := completer.New(e.session.Schema)
+	// Create autocomplete with a function that returns the current schema
+	c := completer.New(func() *schema.Schema {
+		return e.session.Schema
+	})
 	config := completer.NewReadline(c)
 
 	// Initialize readline
@@ -144,6 +147,11 @@ func (e *Engine) handleCommand(input string) error {
 			return fmt.Errorf("SORT requires a field name")
 		}
 		return e.handleSort(args)
+	case "FLATTEN":
+		if args == "" {
+			return fmt.Errorf("FLATTEN requires a field name")
+		}
+		return e.handleFlatten(args)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 	}
@@ -175,6 +183,7 @@ func (e *Engine) handleSelect(args string) error {
 	was := e.session.TotalRecords()
 
 	e.session.Current = executor.Select(e.session.Current, fields)
+	e.session.UpdateSchema()
 	fmt.Printf("✓ Applied SELECT to %d records (was: %d)\n", e.session.TotalRecords(), was)
 
 	return nil
@@ -263,6 +272,7 @@ func (e *Engine) handleExclude(args string) error {
 	fields := splitFields(args)
 
 	e.session.Current = executor.Exclude(e.session.Current, fields)
+	e.session.UpdateSchema()
 	fmt.Printf("✓ Applied EXCLUDE to %d records\n", e.session.TotalRecords())
 
 	return nil
@@ -292,6 +302,22 @@ func (e *Engine) handleSort(args string) error {
 
 	e.session.Current = sorted
 	fmt.Printf("✓ Sorted %d records by %q %s\n", e.session.TotalRecords(), field, direction)
+
+	return nil
+}
+
+func (e *Engine) handleFlatten(args string) error {
+	fieldName := strings.TrimSpace(args)
+	was := e.session.TotalRecords()
+
+	flattened, err := executor.Flatten(e.session.Current, fieldName)
+	if err != nil {
+		return fmt.Errorf("failed to flatten field %q: %w", fieldName, err)
+	}
+
+	e.session.Current = flattened
+	e.session.UpdateSchema()
+	fmt.Printf("✓ Flattened field %q in %d records (was: %d)\n", fieldName, e.session.TotalRecords(), was)
 
 	return nil
 }
