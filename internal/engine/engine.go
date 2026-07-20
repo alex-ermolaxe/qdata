@@ -11,10 +11,9 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/parser"
+	"github.com/alex-ermolaxe/qdata/internal/version"
 	"github.com/chzyer/readline"
 )
-
-const version = "1.1"
 
 // Engine - main application engine
 type Engine struct {
@@ -71,7 +70,7 @@ func (e *Engine) Run() error {
 	// Welcome message
 	fileName := filepath.Base(e.session.FilePath)
 	fmt.Printf("qdata v%s | file: %s | records: %d\n\n",
-		version,
+		version.Version,
 		fileName,
 		e.session.OriginalRecords(),
 	)
