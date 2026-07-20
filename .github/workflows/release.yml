@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build binaries
+        run: |
+          GOOS=darwin  GOARCH=arm64 go build -o qdata . && tar -czf qdata-darwin-arm64.tar.gz qdata && rm qdata
+          GOOS=darwin  GOARCH=amd64 go build -o qdata . && tar -czf qdata-darwin-amd64.tar.gz qdata && rm qdata
+          GOOS=linux   GOARCH=amd64 go build -o qdata . && tar -czf qdata-linux-amd64.tar.gz  qdata && rm qdata
+          GOOS=windows GOARCH=amd64 go build -o qdata.exe . && zip qdata-windows-amd64.zip qdata.exe && rm qdata.exe
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            qdata-darwin-arm64.tar.gz
+            qdata-darwin-amd64.tar.gz
+            qdata-linux-amd64.tar.gz
+            qdata-windows-amd64.zip
