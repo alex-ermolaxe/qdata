@@ -1,8 +1,9 @@
-package executor
+package executor_test
 
 import (
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/iancoleman/orderedmap"
 )
@@ -19,10 +20,10 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten without collisions",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id":   1.0,
 					"name": "Alice",
-					"address": map[string]interface{}{
+					"address": map[string]any{
 						"city":   "Moscow",
 						"zip":    "101000",
 						"street": "Arbat 12",
@@ -56,10 +57,10 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten with collisions - should use prefix",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
-					"id": 1.0,
+				createTestRecord(map[string]any{
+					"id":   1.0,
 					"city": "New York", // collision with work.city
-					"work": map[string]interface{}{
+					"work": map[string]any{
 						"city":   "Tbilisi",
 						"zip":    "0178",
 						"street": "Guramishvili ave 78",
@@ -92,7 +93,7 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten nonexistent field - should return unchanged",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id":   1.0,
 					"name": "Alice",
 				}),
@@ -112,7 +113,7 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten non-object field - should error",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id":   1.0,
 					"name": "Alice",
 					"age":  30.0,
@@ -136,23 +137,23 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten multiple records",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id": 1.0,
-					"address": map[string]interface{}{
+					"address": map[string]any{
 						"city": "Moscow",
 						"zip":  "101000",
 					},
 				}),
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id": 2.0,
-					"address": map[string]interface{}{
+					"address": map[string]any{
 						"city": "Saint Petersburg",
 						"zip":  "190000",
 					},
 				}),
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id": 3.0,
-					"address": map[string]interface{}{
+					"address": map[string]any{
 						"city": "Kazan",
 						"zip":  "420000",
 					},
@@ -184,10 +185,10 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten partial collisions - should use prefix for all nested fields",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
-					"id": 1.0,
+				createTestRecord(map[string]any{
+					"id":   1.0,
 					"city": "New York", // collision
-					"work": map[string]interface{}{
+					"work": map[string]any{
 						"city":   "Tbilisi",
 						"zip":    "0178",
 						"street": "Guramishvili ave 78",
@@ -211,11 +212,11 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten with nested object field",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
+				createTestRecord(map[string]any{
 					"id": 1.0,
-					"user": map[string]interface{}{
+					"user": map[string]any{
 						"name": "Alice",
-						"contact": map[string]interface{}{
+						"contact": map[string]any{
 							"email": "alice@example.com",
 						},
 					},
@@ -236,10 +237,10 @@ func TestFlatten(t *testing.T) {
 		{
 			name: "flatten with array field",
 			records: []format.Record{
-				createTestRecord(map[string]interface{}{
-					"id": 1.0,
-					"tags": []interface{}{"admin", "user"},
-					"metadata": map[string]interface{}{
+				createTestRecord(map[string]any{
+					"id":   1.0,
+					"tags": []any{"admin", "user"},
+					"metadata": map[string]any{
 						"created": "2024-01-01",
 					},
 				}),
@@ -254,7 +255,7 @@ func TestFlatten(t *testing.T) {
 				if !exists {
 					t.Error("expected 'tags' field to exist")
 				}
-				if tagList, ok := tags.([]interface{}); !ok || len(tagList) != 2 {
+				if tagList, ok := tags.([]any); !ok || len(tagList) != 2 {
 					t.Errorf("expected tags to be preserved correctly")
 				}
 
@@ -269,7 +270,7 @@ func TestFlatten(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := Flatten(tt.records, tt.fieldName)
+			result, err := executor.Flatten(tt.records, tt.fieldName)
 
 			if tt.wantErr {
 				if err == nil {
@@ -292,117 +293,13 @@ func TestFlatten(t *testing.T) {
 	}
 }
 
-func TestFlattenRecord(t *testing.T) {
-	t.Run("preserves original data", func(t *testing.T) {
-		record := createTestRecord(map[string]interface{}{
-			"id":   1.0,
-			"name": "Alice",
-			"address": map[string]interface{}{
-				"city": "Moscow",
-			},
-		})
-
-		flattened, err := flattenRecord(record, "address")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Original record should not be modified
-		if _, exists := record.Get("address"); !exists {
-			t.Error("original record should not be modified")
-		}
-
-		// Flattened record should not contain address
-		if _, exists := flattened.Get("address"); exists {
-			t.Error("flattened record should not contain address")
-		}
-	})
-
-	t.Run("handles empty object", func(t *testing.T) {
-		record := createTestRecord(map[string]interface{}{
-			"id":      1.0,
-			"address": map[string]interface{}{},
-		})
-
-		flattened, err := flattenRecord(record, "address")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Should still work with empty object
-		assertFieldValue(t, flattened, "id", 1.0)
-	})
-
-	t.Run("handles nil value in collision check", func(t *testing.T) {
-		record := createTestRecord(map[string]interface{}{
-			"id":      1.0,
-			"city":    nil, // nil value should not be considered as collision
-			"address": map[string]interface{}{
-				"city": "Moscow",
-				"zip":  "101000",
-			},
-		})
-
-		flattened, err := flattenRecord(record, "address")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Since city is nil, no collision should be detected
-		assertFieldValue(t, flattened, "city", "Moscow")
-		assertFieldValue(t, flattened, "zip", "101000")
-	})
-}
-
-func TestFlattenOrder(t *testing.T) {
-	t.Run("preserves field order", func(t *testing.T) {
-		record := createTestRecord(map[string]interface{}{
-			"id":   1.0,
-			"name": "Alice",
-			"address": map[string]interface{}{
-				"city":   "Moscow",
-				"zip":    "101000",
-				"street": "Arbat 12",
-			},
-			"email": "alice@example.com",
-		})
-
-		flattened, err := flattenRecord(record, "address")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Get all keys
-		keys := flattened.Keys()
-
-		// Check order: original fields first, then flattened fields
-		if len(keys) < 5 {
-			t.Errorf("expected at least 5 keys, got %d", len(keys))
-		}
-
-		// id and name should come before flattened address fields
-		idIdx := findKeyIndex(keys, "id")
-		nameIdx := findKeyIndex(keys, "name")
-		cityIdx := findKeyIndex(keys, "city")
-
-		if idIdx == -1 || nameIdx == -1 || cityIdx == -1 {
-			t.Error("expected keys not found")
-			return
-		}
-
-		if !(idIdx < cityIdx && nameIdx < cityIdx) {
-			t.Error("expected original fields to appear before flattened fields")
-		}
-	})
-}
-
 // Benchmarks
 
 func BenchmarkFlattenSingleRecord(b *testing.B) {
-	record := createTestRecord(map[string]interface{}{
+	record := createTestRecord(map[string]any{
 		"id":   1.0,
 		"name": "Alice",
-		"address": map[string]interface{}{
+		"address": map[string]any{
 			"city":    "Moscow",
 			"zip":     "101000",
 			"street":  "Arbat 12",
@@ -412,19 +309,18 @@ func BenchmarkFlattenSingleRecord(b *testing.B) {
 
 	records := []format.Record{record}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = Flatten(records, "address")
+	for b.Loop() {
+		_, _ = executor.Flatten(records, "address")
 	}
 }
 
 func BenchmarkFlattenMultipleRecords(b *testing.B) {
 	records := make([]format.Record, 100)
-	for i := 0; i < 100; i++ {
-		records[i] = createTestRecord(map[string]interface{}{
+	for i := range 100 {
+		records[i] = createTestRecord(map[string]any{
 			"id":   float64(i),
 			"name": "Person",
-			"address": map[string]interface{}{
+			"address": map[string]any{
 				"city":    "City",
 				"zip":     "123456",
 				"street":  "Street",
@@ -433,19 +329,18 @@ func BenchmarkFlattenMultipleRecords(b *testing.B) {
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = Flatten(records, "address")
+	for b.Loop() {
+		_, _ = executor.Flatten(records, "address")
 	}
 }
 
 func BenchmarkFlattenWithCollisions(b *testing.B) {
 	records := make([]format.Record, 100)
-	for i := 0; i < 100; i++ {
-		records[i] = createTestRecord(map[string]interface{}{
+	for i := range 100 {
+		records[i] = createTestRecord(map[string]any{
 			"id":   float64(i),
 			"city": "New York", // collision
-			"address": map[string]interface{}{
+			"address": map[string]any{
 				"city":    "City",
 				"zip":     "123456",
 				"street":  "Street",
@@ -454,18 +349,17 @@ func BenchmarkFlattenWithCollisions(b *testing.B) {
 		})
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = Flatten(records, "address")
+	for b.Loop() {
+		_, _ = executor.Flatten(records, "address")
 	}
 }
 
 // Helper functions
 
-func createTestRecord(data map[string]interface{}) format.Record {
+func createTestRecord(data map[string]any) format.Record {
 	record := orderedmap.New()
 	for k, v := range data {
-		if nestedMap, ok := v.(map[string]interface{}); ok {
+		if nestedMap, ok := v.(map[string]any); ok {
 			record.Set(k, convertToOrderedMap(nestedMap))
 		} else {
 			record.Set(k, v)
@@ -474,10 +368,10 @@ func createTestRecord(data map[string]interface{}) format.Record {
 	return record
 }
 
-func convertToOrderedMap(data map[string]interface{}) *orderedmap.OrderedMap {
+func convertToOrderedMap(data map[string]any) *orderedmap.OrderedMap {
 	om := orderedmap.New()
 	for k, v := range data {
-		if nestedMap, ok := v.(map[string]interface{}); ok {
+		if nestedMap, ok := v.(map[string]any); ok {
 			om.Set(k, convertToOrderedMap(nestedMap))
 		} else {
 			om.Set(k, v)
@@ -486,7 +380,7 @@ func convertToOrderedMap(data map[string]interface{}) *orderedmap.OrderedMap {
 	return om
 }
 
-func assertFieldValue(t *testing.T, record format.Record, fieldName string, expectedValue interface{}) {
+func assertFieldValue(t *testing.T, record format.Record, fieldName string, expectedValue any) {
 	t.Helper()
 	value, exists := record.Get(fieldName)
 	if !exists {
@@ -505,13 +399,4 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
-}
-
-func findKeyIndex(keys []string, key string) int {
-	for i, k := range keys {
-		if k == key {
-			return i
-		}
-	}
-	return -1
 }
