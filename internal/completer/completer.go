@@ -11,7 +11,7 @@ import (
 // keywords - list of available commands
 var keywords = []string{
 	"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW",
-	"SAVE", "RESET", "COUNT", "SCHEMA", "EXIT",
+	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "EXIT",
 }
 
 // sortDirections - sort directions
@@ -22,12 +22,12 @@ var saveFormats = []string{"json", "xml", "csv"}
 
 // Completer - implements readline.AutoCompleter
 type Completer struct {
-	schema *schema.Schema
+	schemaGetter func() *schema.Schema
 }
 
-// New creates a new Completer based on schema
-func New(s *schema.Schema) *Completer {
-	return &Completer{schema: s}
+// New creates a new Completer based on schema getter function
+func New(schemaGetter func() *schema.Schema) *Completer {
+	return &Completer{schemaGetter: schemaGetter}
 }
 
 // Do implements readline.AutoCompleter interface
@@ -56,7 +56,7 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	command := parts[0]
 
 	switch command {
-	case "WHERE", "SELECT", "EXCLUDE":
+	case "WHERE", "SELECT", "EXCLUDE", "FLATTEN":
 		return c.completeFields(lastWord)
 	case "SORT":
 		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
@@ -92,7 +92,8 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 // completeFields suggests schema fields considering nesting
 func (c *Completer) completeFields(prefix string) ([][]rune, int) {
-	allPaths := c.schema.AllPaths()
+	schema := c.schemaGetter()
+	allPaths := schema.AllPaths()
 	upperPrefix := strings.ToUpper(prefix)
 
 	// If there's a dot - suggest only nested fields of the appropriate parent
