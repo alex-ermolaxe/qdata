@@ -13,10 +13,12 @@ all in a simple SQL-like syntax.
 - [SORT — Sort records](#sort--sort-records)
 - [SHOW — Display results](#show--display-results)
 - [SAVE — Save to file](#save--save-to-file)
+- [FLATTEN — Flatten nested object fields](#flatten--flatten-nested-object-fields)
 - [RESET — Reset to original](#reset--reset-to-original)
 - [COUNT — Count records](#count--count-records)
 - [SCHEMA — View data schema](#schema--view-data-schema)
 - [EXIT — Quit session](#exit--quit-session)
+- [VERSION — Show application version](#version--show-application-version)
 
 ---
 
@@ -108,6 +110,38 @@ WHERE (age > 18 AND age < 65) AND status = "active"
 ---
 
 ## SELECT — Pick fields
+
+Keeps only the specified fields in each record.
+
+```
+SELECT <field1>, <field2>, ...
+```
+
+### Examples
+
+```
+-- Pick specific fields
+SELECT id, name, email
+
+-- Pick nested fields
+SELECT id, name, address.city, address.zip
+
+-- Reset to full record
+SELECT *
+```
+
+### Notes
+
+- Nested fields such as `address.city` are extracted and placed into the result.
+- The original nested structure is preserved in the output.
+
+### Output
+
+```
+> SELECT id, name, address.city
+✓ Applied SELECT to 243 records
+```
+
 
 Keeps only the specified fields in each record.
 
@@ -277,6 +311,40 @@ SAVE AS report FORMAT csv
 
 ---
 
+## FLATTEN — Flatten nested object fields
+
+FLATTEN expands all fields of a nested object into the top-level record. If any field names collide with existing top-level fields, all flattened fields will be prefixed with the object field name followed by an underscore.
+
+```
+FLATTEN <object_field>
+```
+
+### Examples
+
+```
+-- Simple flatten
+FLATTEN address
+
+-- Flatten multiple nested objects
+FLATTEN address
+FLATTEN work
+```
+
+### Behavior
+
+- If the top-level object already contains a field with the same name as a nested field, the flattened fields are added with the prefix `<object_field>_` (e.g. `work_city`).
+- Non-object fields cause an error (e.g. `FLATTEN name` when `name` is a string).
+- If the specified object field does not exist, the dataset is left unchanged.
+
+### Output
+
+```
+> FLATTEN address
+✓ Flattened field "address" in 1500 records (was: 1500)
+```
+
+---
+
 ## RESET — Reset to original
 
 Discards all applied filters and transformations, restoring the full original dataset.
@@ -349,13 +417,31 @@ EXIT
 
 ---
 
+## VERSION — Show application version
+
+The application exposes a standard Cobra version command and flag. Use any of the following to print the current qdata version and exit:
+
+```
+qdata --version
+qdata version
+qdata -v
+```
+
+Example output:
+
+```
+qdata v1.1.1
+```
+
+---
+
 ## Autocomplete
 
 Press `Tab` at any point to trigger autocomplete.
 
 | Context | Suggestions |
 |---------|-------------|
-| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `RESET`, `COUNT`, `SCHEMA`, `EXIT` |
+| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `RESET`, `COUNT`, `SCHEMA`, `EXIT` |
 | After a command keyword | Field names from the current dataset schema |
 | After a dot in a field path | Nested field names (e.g. `address.` → `address.city`, `address.zip`) |
 | After `SORT <field>` | `ASC`, `DESC` |
