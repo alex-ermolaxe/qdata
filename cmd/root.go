@@ -7,6 +7,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/engine"
 	formatcsv "github.com/alex-ermolaxe/qdata/internal/format/csv"
 	formatjson "github.com/alex-ermolaxe/qdata/internal/format/json"
+	"github.com/alex-ermolaxe/qdata/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -50,4 +51,8 @@ func init() {
 	// Flags
 	rootCmd.Flags().StringVarP(&filePath, "file", "f", "", "path to the data file (required)")
 	rootCmd.Flags().StringVar(&formatName, "format", "", "file format: json, xml, csv (auto-detected if not set)")
+
+	rootCmd.Version = version.Version
+	rootCmd.SetVersionTemplate("qdata v{{.Version}}\n")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "show actual version")
 }
