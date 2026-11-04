@@ -45,6 +45,14 @@ func TestSessionsAreIndependent(t *testing.T) {
 			t.Errorf("MCP tool %q must not be registered", name)
 		}
 	}
+	loadAnnotations := tools["load"].Tool.Annotations
+	if loadAnnotations.DestructiveHint == nil || *loadAnnotations.DestructiveHint {
+		t.Errorf("load destructiveHint = %v, want false", loadAnnotations.DestructiveHint)
+	}
+	saveAnnotations := tools["save"].Tool.Annotations
+	if saveAnnotations.DestructiveHint == nil || !*saveAnnotations.DestructiveHint {
+		t.Errorf("save destructiveHint = %v, want true", saveAnnotations.DestructiveHint)
+	}
 	usersResult, err := srv.load(context.Background(), toolRequest(map[string]any{"path": usersPath}))
 	if err != nil {
 		t.Fatal(err)

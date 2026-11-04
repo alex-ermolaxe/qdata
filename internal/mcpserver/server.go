@@ -37,6 +37,7 @@ func Serve() error {
 func (srv *mcpServer) registerTools(mcpSrv *server.MCPServer) {
 	mcpSrv.AddTool(mcp.NewTool("load",
 		mcp.WithDescription("Load a JSON, CSV, or supported data file into a named qdata session. Use the returned session_id in every subsequent tool call. If session_id is omitted, it is generated from the file name; collisions receive a numeric suffix."),
+		mcp.WithDestructiveHintAnnotation(false),
 		mcp.WithString("path", mcp.Required(), mcp.Description("Path to the data file to load.")),
 		mcp.WithString("format", mcp.Description("Optional format name such as json or csv. If omitted, qdata detects it from the file extension.")),
 		mcp.WithString("session_id", mcp.Description("Optional name for this session. If omitted, use the file name without its extension.")),

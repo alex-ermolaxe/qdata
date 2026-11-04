@@ -21,6 +21,7 @@ all in a simple SQL-like syntax.
 - [INFO — List commands](#info--list-commands)
 - [EXIT — Quit session](#exit--quit-session)
 - [VERSION — Show application version](#version--show-application-version)
+- [Using with AI Assistants (MCP)](#using-with-ai-assistants-mcp)
 
 ---
 
@@ -35,27 +36,6 @@ qdata --file ./data.json
 qdata --file ./data.json --format json
 ```
 
-### MCP server
-
-qdata can also run as an MCP server over stdio. Configure your IDE or MCP client
-with the path to the built executable:
-
-```json
-{
-  "servers": {
-    "qdata": {
-      "command": "/abs/qdata",
-      "args": ["mcp-serve"]
-    }
-  }
-}
-```
-
-The MCP server supports multiple independent dataset sessions. Start with
-`load`, then pass its returned `session_id` to tools such as `where`, `select`,
-`schema`, and `count`. Call `schema` before constructing field paths and check
-`count` after filtering.
-
 After launch, an interactive session opens:
 
 ```
@@ -64,6 +44,105 @@ qdata v1.0 | file: data.json | records: 1500
 ```
 
 Every command operates on the **current intermediate result**. The result is updated after each command and is available for further querying. Use [`RESET`](#reset--reset-to-original) to return to the original dataset at any time.
+
+---
+
+## Using with AI Assistants (MCP)
+
+qdata connects to MCP clients such as GitHub Copilot, Cursor, Claude Desktop, and others by running `qdata mcp-serve`. It provides tools for loading, filtering, sorting, and transforming data, and supports working with multiple files at once through named, isolated sessions.
+
+### Installation
+
+Install qdata into your Go binary directory:
+
+```bash
+go install github.com/alex-ermolaxe/qdata@latest
+```
+
+Make sure `$(go env GOPATH)/bin` is included in your `PATH`. Alternatively, build the binary locally and use its absolute path in your MCP client configuration:
+
+```bash
+go build -o qdata .
+```
+
+### Configuration
+
+#### GitHub Copilot (JetBrains / VS Code)
+
+```json
+{
+  "servers": {
+    "qdata": {
+      "command": "qdata",
+      "args": ["mcp-serve"]
+    }
+  }
+}
+```
+
+#### Cursor (`~/.cursor/mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "qdata": {
+      "command": "qdata",
+      "args": ["mcp-serve"]
+    }
+  }
+}
+```
+
+#### Claude Desktop (`claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "qdata": {
+      "command": "qdata",
+      "args": ["mcp-serve"]
+    }
+  }
+}
+```
+
+If qdata is not in `PATH`, replace `"command": "qdata"` with the absolute path to the executable. Keep `"args": ["mcp-serve"]` in every configuration so the MCP server starts instead of the interactive CLI.
+
+### Available MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `load` | Load a data file into a named session. |
+| `list_sessions` | List loaded sessions, source paths, and current record counts. |
+| `close_session` | Close a session and discard its current query state. |
+| `where` | Filter records by a condition. |
+| `select` | Keep specified fields. |
+| `exclude` | Remove specified fields. |
+| `sort` | Sort records by a field. |
+| `show` | Display current records as JSON. |
+| `save` | Save current records beside the source file. |
+| `flatten` | Flatten a nested object field. |
+| `transform` | Transform records into maps using selected key and value paths. |
+| `reset` | Restore the session's original records. |
+| `count` | Count records in the current result. |
+| `schema` | Show available fields and inferred types. |
+
+All tools except `load` and `list_sessions` require `session_id`, which is returned by `load`.
+
+### Usage notes
+
+- Start with `load`; it returns the `session_id` to use in subsequent calls.
+- Use a different `session_id` for each file; sessions are isolated from one another.
+- Provide absolute paths to data files.
+- MCP mode does not affect the regular `qdata --file` interactive CLI.
+
+### Troubleshooting
+
+| Symptom | Solution |
+|---------|----------|
+| MCP tools do not appear | Check the executable path and that the configuration contains `"args": ["mcp-serve"]`, then restart the MCP client. |
+| Server exits immediately | Make sure it is launched with `mcp-serve`, not as plain `qdata`. |
+| A data file does not load | Use the file's absolute path. |
 
 ---
 
