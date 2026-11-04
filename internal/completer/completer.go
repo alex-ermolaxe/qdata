@@ -11,7 +11,7 @@ import (
 // keywords - list of available commands
 var keywords = []string{
 	"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW",
-	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "EXIT",
+	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "TRANSFORM", "INFO", "EXIT",
 }
 
 // sortDirections - sort directions
@@ -58,6 +58,27 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	switch command {
 	case "WHERE", "SELECT", "EXCLUDE", "FLATTEN":
 		return c.completeFields(lastWord)
+	case "TRANSFORM":
+		switch {
+		case len(parts) == 1:
+			return completeFrom([]string{"TO-MAP"}, "")
+		case len(parts) == 2:
+			if strings.HasSuffix(input, " ") {
+				return completeFrom([]string{"KEY"}, "")
+			}
+			return completeFrom([]string{"TO-MAP"}, lastWord)
+		case len(parts) == 3 && strings.EqualFold(parts[2], "KEY"):
+			return c.completeFields("")
+		case len(parts) == 4:
+			if strings.HasSuffix(input, " ") {
+				return completeFrom([]string{"VALUE"}, "")
+			}
+			return c.completeFields(lastWord)
+		case len(parts) == 5 && strings.EqualFold(parts[4], "VALUE"):
+			return c.completeFields("")
+		case len(parts) == 6 && strings.EqualFold(parts[4], "VALUE"):
+			return c.completeFields(lastWord)
+		}
 	case "SORT":
 		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
 			return completeFrom(sortDirections, "")
@@ -159,6 +180,9 @@ func toRunes(options []string) [][]rune {
 }
 
 func isLower(s string) bool {
+	if s == "" {
+		return false
+	}
 	return unicode.IsLower(rune(s[0]))
 }
 

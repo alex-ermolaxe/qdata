@@ -118,6 +118,8 @@ func (e *Engine) handleCommand(input string) error {
 		os.Exit(0)
 	case "SCHEMA":
 		e.session.Schema.Print()
+	case "INFO":
+		printInfo()
 	case "COUNT":
 		fmt.Printf("%d records\n", e.session.TotalRecords())
 	case "RESET":
@@ -152,11 +154,47 @@ func (e *Engine) handleCommand(input string) error {
 			return fmt.Errorf("FLATTEN requires a field name")
 		}
 		return e.handleFlatten(args)
+	case "TRANSFORM":
+		keyPath, valuePath, err := parseTransformArgs(args)
+		if err != nil {
+			return err
+		}
+		return e.handleTransformToMap(keyPath, valuePath)
 	default:
 		fmt.Printf("unknown command: %s\n", command)
 	}
 
 	return nil
+}
+
+func printInfo() {
+	fmt.Println(`Available commands:
+  WHERE <condition> [AND|OR <condition> ...]  Filter records
+  SELECT <field>[, <field> ...] | *           Keep selected fields
+  EXCLUDE <field>[, <field> ...]              Remove fields
+  SORT <field> [ASC|DESC]                     Sort records
+  SHOW [LIMIT <n>] [OFFSET <n>]               Display current records
+  SAVE [AS <filename>] [FORMAT <format>]       Save current records
+  FLATTEN <object_field>                      Flatten an object field
+  TRANSFORM TO-MAP KEY <path> VALUE <path>     Create a map using record values
+  RESET                                        Restore the original records
+  COUNT                                        Count current records
+  SCHEMA                                       Show fields and their types
+  INFO                                         Show this command list
+  EXIT                                         Quit qdata`)
+}
+
+func parseTransformArgs(args string) (string, string, error) {
+	parts := strings.Fields(args)
+	if len(parts) != 5 ||
+		!strings.EqualFold(parts[0], "TO-MAP") ||
+		!strings.EqualFold(parts[1], "KEY") ||
+		!strings.EqualFold(parts[3], "VALUE") ||
+		parts[2] == "" ||
+		parts[4] == "" {
+		return "", "", fmt.Errorf("TRANSFORM syntax: TRANSFORM TO-MAP KEY <key_field> VALUE <value_field>")
+	}
+	return parts[2], parts[4], nil
 }
 
 func (e *Engine) handleWhere(args string) error {
@@ -319,5 +357,17 @@ func (e *Engine) handleFlatten(args string) error {
 	e.session.UpdateSchema()
 	fmt.Printf("✓ Flattened field %q in %d records (was: %d)\n", fieldName, e.session.TotalRecords(), was)
 
+	return nil
+}
+
+func (e *Engine) handleTransformToMap(keyPath, valuePath string) error {
+	transformed, err := executor.TransformToMap(e.session.Current, keyPath, valuePath)
+	if err != nil {
+		return fmt.Errorf("failed to transform records: %w", err)
+	}
+
+	e.session.Current = transformed
+	e.session.UpdateSchema()
+	fmt.Printf("✓ Transformed %d records to maps\n", e.session.TotalRecords())
 	return nil
 }

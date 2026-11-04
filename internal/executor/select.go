@@ -17,10 +17,7 @@ func Select(records []format.Record, fields []string) []format.Record {
 		newRecord := format.NewRecord()
 
 		for _, field := range fields {
-			val, exists := schema.GetNested(record, field)
-			if exists {
-				schema.SetNested(newRecord, field, val)
-			}
+			schema.SelectNested(record, newRecord, field)
 		}
 
 		result[i] = newRecord

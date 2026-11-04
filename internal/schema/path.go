@@ -54,6 +54,148 @@ func GetNested(record format.Record, path string) (any, bool) {
 	return nil, false
 }
 
+// GetNestedValues extracts a path from an object, traversing arrays and
+// returning the matching value from each element in an array.
+func GetNestedValues(record format.Record, path string) (any, bool) {
+	return getNestedValues(record, Split(path))
+}
+
+func getNestedValues(value any, parts []string) (any, bool) {
+	if len(parts) == 0 {
+		return value, true
+	}
+
+	if items, ok := value.([]any); ok {
+		values := make([]any, 0, len(items))
+		for _, item := range items {
+			itemValue, exists := getNestedValues(item, parts)
+			if exists {
+				values = append(values, itemValue)
+			}
+		}
+		return values, true
+	}
+
+	object, ok := asOrderedMap(value)
+	if !ok {
+		return nil, false
+	}
+	_, child, exists := getObjectField(object, parts[0])
+	if !exists {
+		return nil, false
+	}
+	return getNestedValues(child, parts[1:])
+}
+
+// SelectNested copies the fields at path from source into destination.
+// When the path crosses an array, it projects each object in that array.
+func SelectNested(source, destination format.Record, path string) bool {
+	return selectObject(source, destination, Split(path))
+}
+
+func selectObject(source, destination any, parts []string) bool {
+	if len(parts) == 0 {
+		return false
+	}
+
+	sourceMap, ok := asOrderedMap(source)
+	if !ok {
+		return false
+	}
+	targetMap, ok := asOrderedMap(destination)
+	if !ok {
+		return false
+	}
+
+	key, value, exists := getObjectField(sourceMap, parts[0])
+	if !exists {
+		return false
+	}
+	if len(parts) == 1 {
+		targetMap.Set(key, value)
+		return true
+	}
+
+	targetValue, _ := targetMap.Get(key)
+	switch value.(type) {
+	case *orderedmap.OrderedMap, orderedmap.OrderedMap, map[string]any:
+		targetChild, ok := asOrderedMap(targetValue)
+		if !ok {
+			targetChild = orderedmap.New()
+		}
+		selectObject(value, targetChild, parts[1:])
+		targetMap.Set(key, targetChild)
+	case []any:
+		if selected, ok := selectArray(value, targetValue, parts[1:]); ok {
+			targetMap.Set(key, selected)
+		}
+	default:
+		return false
+	}
+
+	return true
+}
+
+func selectArray(source, destination any, parts []string) ([]any, bool) {
+	items, ok := source.([]any)
+	if !ok {
+		return nil, false
+	}
+	selected, ok := destination.([]any)
+	if !ok || len(selected) != len(items) {
+		selected = make([]any, len(items))
+	}
+
+	for i, item := range items {
+		switch item.(type) {
+		case *orderedmap.OrderedMap, orderedmap.OrderedMap, map[string]any:
+			target := orderedmap.New()
+			if existing, exists := asOrderedMap(selected[i]); exists {
+				target = existing
+			}
+			selectObject(item, target, parts)
+			selected[i] = target
+		default:
+			selected[i] = item
+		}
+	}
+	return selected, true
+}
+
+func asOrderedMap(value any) (*orderedmap.OrderedMap, bool) {
+	switch object := value.(type) {
+	case *orderedmap.OrderedMap:
+		if object == nil {
+			return nil, false
+		}
+		return object, true
+	case orderedmap.OrderedMap:
+		return &object, true
+	case map[string]any:
+		result := orderedmap.New()
+		for key, value := range object {
+			result.Set(key, value)
+		}
+		return result, true
+	default:
+		return nil, false
+	}
+}
+
+func getObjectField(object *orderedmap.OrderedMap, key string) (string, any, bool) {
+	if value, ok := object.Get(key); ok {
+		return key, value, true
+	}
+	upperKey := strings.ToUpper(key)
+	for _, actualKey := range object.Keys() {
+		if strings.ToUpper(actualKey) == upperKey {
+			value, ok := object.Get(actualKey)
+			return actualKey, value, ok
+		}
+	}
+	return "", nil, false
+}
+
 // findKeyCaseInsensitive searches for a key in OrderedMap case-insensitively
 func findKeyCaseInsensitive(m *orderedmap.OrderedMap, key string) (any, bool) {
 	upperKey := strings.ToUpper(key)
