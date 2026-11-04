@@ -17,6 +17,7 @@ all in a simple SQL-like syntax.
 - [RESET — Reset to original](#reset--reset-to-original)
 - [COUNT — Count records](#count--count-records)
 - [SCHEMA — View data schema](#schema--view-data-schema)
+- [INFO — List commands](#info--list-commands)
 - [EXIT — Quit session](#exit--quit-session)
 - [VERSION — Show application version](#version--show-application-version)
 
@@ -126,6 +127,9 @@ SELECT id, name, email
 -- Pick nested fields
 SELECT id, name, address.city, address.zip
 
+-- Pick fields from each object in an array
+SELECT id, items.name, items.price
+
 -- Reset to full record
 SELECT *
 ```
@@ -133,7 +137,7 @@ SELECT *
 ### Notes
 
 - Nested fields such as `address.city` are extracted and placed into the result.
-- The original nested structure is preserved in the output.
+- For arrays of objects, paths such as `items.name` keep the array structure and include only the selected fields in each object.
 
 ### Output
 
@@ -407,6 +411,16 @@ Fields in current dataset:
 
 ---
 
+## INFO — List commands
+
+Prints the available interactive commands and the arguments each command accepts.
+
+```
+INFO
+```
+
+---
+
 ## EXIT — Quit session
 
 Closes the interactive session.
@@ -441,7 +455,7 @@ Press `Tab` at any point to trigger autocomplete.
 
 | Context | Suggestions |
 |---------|-------------|
-| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `RESET`, `COUNT`, `SCHEMA`, `EXIT` |
+| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `RESET`, `COUNT`, `SCHEMA`, `INFO`, `EXIT` |
 | After a command keyword | Field names from the current dataset schema |
 | After a dot in a field path | Nested field names (e.g. `address.` → `address.city`, `address.zip`) |
 | After `SORT <field>` | `ASC`, `DESC` |

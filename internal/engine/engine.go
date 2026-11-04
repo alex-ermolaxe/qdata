@@ -118,6 +118,8 @@ func (e *Engine) handleCommand(input string) error {
 		os.Exit(0)
 	case "SCHEMA":
 		e.session.Schema.Print()
+	case "INFO":
+		printInfo()
 	case "COUNT":
 		fmt.Printf("%d records\n", e.session.TotalRecords())
 	case "RESET":
@@ -157,6 +159,22 @@ func (e *Engine) handleCommand(input string) error {
 	}
 
 	return nil
+}
+
+func printInfo() {
+	fmt.Println(`Available commands:
+  WHERE <condition> [AND|OR <condition> ...]  Filter records
+  SELECT <field>[, <field> ...] | *           Keep selected fields
+  EXCLUDE <field>[, <field> ...]              Remove fields
+  SORT <field> [ASC|DESC]                     Sort records
+  SHOW [LIMIT <n>] [OFFSET <n>]               Display current records
+  SAVE [AS <filename>] [FORMAT <format>]       Save current records
+  FLATTEN <object_field>                      Flatten an object field
+  RESET                                        Restore the original records
+  COUNT                                        Count current records
+  SCHEMA                                       Show fields and their types
+  INFO                                         Show this command list
+  EXIT                                         Quit qdata`)
 }
 
 func (e *Engine) handleWhere(args string) error {

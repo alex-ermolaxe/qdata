@@ -103,26 +103,43 @@ func collectFields(record format.Record, prefix string, schema *Schema) {
 		if prefix != "" {
 			path = prefix + "." + key
 		}
+		collectField(path, val, prefix == "", schema)
+	}
+}
 
-		fieldType := inferType(val)
+func collectMapFields(record map[string]any, prefix string, schema *Schema) {
+	for key, val := range record {
+		path := prefix + "." + key
+		collectField(path, val, false, schema)
+	}
+}
 
-		if _, exists := schema.index[path]; !exists {
-			field := &Field{
-				Path: path,
-				Type: fieldType,
-			}
-			schema.index[path] = field
-
-			if prefix == "" {
-				schema.Fields = append(schema.Fields, field)
-			}
+func collectField(path string, value any, topLevel bool, schema *Schema) {
+	field, exists := schema.index[path]
+	if !exists {
+		field = &Field{
+			Path: path,
+			Type: inferType(value),
 		}
+		schema.index[path] = field
+		if topLevel {
+			schema.Fields = append(schema.Fields, field)
+		}
+	}
 
-		switch nested := val.(type) {
-		case *orderedmap.OrderedMap:
-			collectFields(nested, path, schema)
-		case orderedmap.OrderedMap:
-			collectFields(&nested, path, schema)
+	switch nested := value.(type) {
+	case *orderedmap.OrderedMap:
+		collectFields(nested, path, schema)
+	case orderedmap.OrderedMap:
+		collectFields(&nested, path, schema)
+	case map[string]any:
+		collectMapFields(nested, path, schema)
+	case []any:
+		for _, item := range nested {
+			switch item.(type) {
+			case *orderedmap.OrderedMap, orderedmap.OrderedMap, map[string]any, []any:
+				collectField(path, item, false, schema)
+			}
 		}
 	}
 }
@@ -172,23 +189,27 @@ func printFields(fields []*Field, index map[string]*Field, depth int) {
 
 		if f.Type == TypeObject {
 			fmt.Printf("%s%s%s\n", indent.String(), prefix, name)
-			// Collect child fields
-			var children []*Field
-			for path, field := range index {
-				if len(path) > len(f.Path)+1 &&
-					path[:len(f.Path)] == f.Path &&
-					path[len(f.Path)] == '.' {
-					rest := path[len(f.Path)+1:]
-					if !containsDot(rest) {
-						children = append(children, field)
-					}
-				}
-			}
-			printFields(children, index, depth+1)
 		} else {
 			fmt.Printf("%s%s%-20s %s\n", indent.String(), prefix, name, f.Type)
 		}
+
+		children := directChildren(f.Path, index)
+		if len(children) > 0 {
+			printFields(children, index, depth+1)
+		}
 	}
+}
+
+func directChildren(parent string, index map[string]*Field) []*Field {
+	var children []*Field
+	for path, field := range index {
+		if len(path) > len(parent)+1 &&
+			strings.HasPrefix(path, parent+".") &&
+			!containsDot(path[len(parent)+1:]) {
+			children = append(children, field)
+		}
+	}
+	return children
 }
 
 func containsDot(s string) bool {

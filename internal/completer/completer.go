@@ -11,7 +11,7 @@ import (
 // keywords - list of available commands
 var keywords = []string{
 	"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW",
-	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "EXIT",
+	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "INFO", "EXIT",
 }
 
 // sortDirections - sort directions
