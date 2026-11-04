@@ -35,6 +35,27 @@ qdata --file ./data.json
 qdata --file ./data.json --format json
 ```
 
+### MCP server
+
+qdata can also run as an MCP server over stdio. Configure your IDE or MCP client
+with the path to the built executable:
+
+```json
+{
+  "servers": {
+    "qdata": {
+      "command": "/abs/qdata",
+      "args": ["mcp-serve"]
+    }
+  }
+}
+```
+
+The MCP server supports multiple independent dataset sessions. Start with
+`load`, then pass its returned `session_id` to tools such as `where`, `select`,
+`schema`, and `count`. Call `schema` before constructing field paths and check
+`count` after filtering.
+
 After launch, an interactive session opens:
 
 ```

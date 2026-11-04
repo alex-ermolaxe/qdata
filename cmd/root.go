@@ -7,6 +7,7 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/engine"
 	formatcsv "github.com/alex-ermolaxe/qdata/internal/format/csv"
 	formatjson "github.com/alex-ermolaxe/qdata/internal/format/json"
+	"github.com/alex-ermolaxe/qdata/internal/mcpserver"
 	"github.com/alex-ermolaxe/qdata/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -26,12 +27,21 @@ and transforming structured data files (JSON, XML, CSV) using a simple SQL-like 
 			return fmt.Errorf("--file flag is required")
 		}
 
-		e, err := engine.New(filePath, formatName)
+		e, err := engine.NewFromFile(filePath, formatName)
 		if err != nil {
 			return err
 		}
 
 		return e.Run()
+	},
+}
+
+var mcpCmd = &cobra.Command{
+	Use:    "mcp-serve",
+	Short:  "Run qdata as an MCP server",
+	Hidden: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return mcpserver.Serve()
 	},
 }
 
@@ -55,4 +65,5 @@ func init() {
 	rootCmd.Version = version.Version
 	rootCmd.SetVersionTemplate("qdata v{{.Version}}\n")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "show actual version")
+	rootCmd.AddCommand(mcpCmd)
 }
