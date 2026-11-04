@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +11,9 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/format"
 )
 
-// Save saves records to a file next to the original
-func Save(records []format.Record, originalPath string, fileName string, f format.Format) error {
+// Save saves records next to the original and returns the status text.
+// If confirm is nil, an existing target returns an error instead of prompting.
+func Save(records []format.Record, originalPath string, fileName string, f format.Format, confirm func(string) bool) (string, error) {
 	dir := filepath.Dir(originalPath)
 	ext := strings.TrimPrefix(filepath.Ext(originalPath), ".")
 
@@ -25,31 +27,33 @@ func Save(records []format.Record, originalPath string, fileName string, f forma
 
 	// If file already exists - ask for confirmation
 	if _, err := os.Stat(targetPath); err == nil {
-		if !confirmOverwrite(targetPath) {
-			fmt.Println("Save cancelled.")
-			return nil
+		if confirm == nil {
+			return "", fmt.Errorf("file exists, use AS <name> or overwrite")
 		}
+		if !confirm(targetPath) {
+			return "Save cancelled.\n", nil
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("failed to inspect target file: %w", err)
 	}
 
 	// Create file
 	file, err := os.Create(targetPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		return "", fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
 
 	// Serialize data
 	if err := f.Encode(file, records); err != nil {
-		return fmt.Errorf("failed to encode records: %w", err)
+		return "", fmt.Errorf("failed to encode records: %w", err)
 	}
 
-	fmt.Printf("✓ Saved %d records → %s\n", len(records), targetPath)
-
-	return nil
+	return fmt.Sprintf("✓ Saved %d records → %s\n", len(records), targetPath), nil
 }
 
-// confirmOverwrite asks for confirmation to overwrite a file
-func confirmOverwrite(path string) bool {
+// ConfirmOverwrite asks for confirmation to overwrite a file in interactive use.
+func ConfirmOverwrite(path string) bool {
 	fmt.Printf("File already exists: %s\nOverwrite? [y/N]: ", path)
 
 	reader := bufio.NewReader(os.Stdin)

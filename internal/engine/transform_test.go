@@ -15,8 +15,8 @@ func TestHandleTransformCommand(t *testing.T) {
 	record.Set("assets", []any{asset})
 
 	engine := &Engine{session: NewSession("input.json", nil, []format.Record{record})}
-	if err := engine.handleCommand("TRANSFORM TO-MAP KEY sap_order_id VALUE assets.name"); err != nil {
-		t.Fatalf("handleCommand() error = %v", err)
+	if _, err := engine.ExecuteCommand("TRANSFORM TO-MAP KEY sap_order_id VALUE assets.name"); err != nil {
+		t.Fatalf("ExecuteCommand() error = %v", err)
 	}
 
 	if len(engine.session.Current) != 1 {
