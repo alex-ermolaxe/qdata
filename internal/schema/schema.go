@@ -170,10 +170,17 @@ func inferType(val any) FieldType {
 
 // Print outputs the schema in a readable format
 func (s *Schema) Print() {
-	printFields(s.Fields, s.index, 0)
+	fmt.Print(s.Render())
 }
 
-func printFields(fields []*Field, index map[string]*Field, depth int) {
+// Render returns the schema in a readable format without writing to stdout.
+func (s *Schema) Render() string {
+	var output strings.Builder
+	renderFields(&output, s.Fields, s.index, 0)
+	return output.String()
+}
+
+func renderFields(output *strings.Builder, fields []*Field, index map[string]*Field, depth int) {
 	var indent strings.Builder
 	prefix := ""
 	for range depth {
@@ -188,14 +195,14 @@ func printFields(fields []*Field, index map[string]*Field, depth int) {
 		name := parts[len(parts)-1]
 
 		if f.Type == TypeObject {
-			fmt.Printf("%s%s%s\n", indent.String(), prefix, name)
+			fmt.Fprintf(output, "%s%s%s\n", indent.String(), prefix, name)
 		} else {
-			fmt.Printf("%s%s%-20s %s\n", indent.String(), prefix, name, f.Type)
+			fmt.Fprintf(output, "%s%s%-20s %s\n", indent.String(), prefix, name, f.Type)
 		}
 
 		children := directChildren(f.Path, index)
 		if len(children) > 0 {
-			printFields(children, index, depth+1)
+			renderFields(output, children, index, depth+1)
 		}
 	}
 }

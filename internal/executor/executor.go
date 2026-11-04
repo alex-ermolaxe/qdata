@@ -3,19 +3,28 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/alex-ermolaxe/qdata/internal/format"
 )
 
 // Show outputs records to terminal
 func Show(records []format.Record, limit int, offset int) error {
+	output, err := RenderShow(records, limit, offset)
+	if err != nil {
+		return err
+	}
+	fmt.Print(output)
+	return nil
+}
+
+// RenderShow formats records for display without writing to stdout.
+func RenderShow(records []format.Record, limit int, offset int) (string, error) {
 	total := len(records)
 
 	// Apply offset
 	if offset >= total {
-		fmt.Println("[]")
-		fmt.Printf("── 0 of %d records ──\n", total)
-		return nil
+		return fmt.Sprintf("[]\n── 0 of %d records ──\n", total), nil
 	}
 	records = records[offset:]
 
@@ -29,11 +38,11 @@ func Show(records []format.Record, limit int, offset int) error {
 	// Serialize to indented JSON
 	data, err := json.MarshalIndent(records, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to serialize records: %w", err)
+		return "", fmt.Errorf("failed to serialize records: %w", err)
 	}
 
-	fmt.Println(string(data))
-	fmt.Printf("── %d of %d records ──\n", shown, total)
-
-	return nil
+	var output strings.Builder
+	fmt.Fprintln(&output, string(data))
+	fmt.Fprintf(&output, "── %d of %d records ──\n", shown, total)
+	return output.String(), nil
 }
