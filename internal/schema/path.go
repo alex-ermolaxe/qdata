@@ -54,6 +54,39 @@ func GetNested(record format.Record, path string) (any, bool) {
 	return nil, false
 }
 
+// GetNestedValues extracts a path from an object, traversing arrays and
+// returning the matching value from each element in an array.
+func GetNestedValues(record format.Record, path string) (any, bool) {
+	return getNestedValues(record, Split(path))
+}
+
+func getNestedValues(value any, parts []string) (any, bool) {
+	if len(parts) == 0 {
+		return value, true
+	}
+
+	if items, ok := value.([]any); ok {
+		values := make([]any, 0, len(items))
+		for _, item := range items {
+			itemValue, exists := getNestedValues(item, parts)
+			if exists {
+				values = append(values, itemValue)
+			}
+		}
+		return values, true
+	}
+
+	object, ok := asOrderedMap(value)
+	if !ok {
+		return nil, false
+	}
+	_, child, exists := getObjectField(object, parts[0])
+	if !exists {
+		return nil, false
+	}
+	return getNestedValues(child, parts[1:])
+}
+
 // SelectNested copies the fields at path from source into destination.
 // When the path crosses an array, it projects each object in that array.
 func SelectNested(source, destination format.Record, path string) bool {

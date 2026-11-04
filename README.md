@@ -14,6 +14,7 @@ all in a simple SQL-like syntax.
 - [SHOW — Display results](#show--display-results)
 - [SAVE — Save to file](#save--save-to-file)
 - [FLATTEN — Flatten nested object fields](#flatten--flatten-nested-object-fields)
+- [TRANSFORM — Transform records to maps](#transform--transform-records-to-maps)
 - [RESET — Reset to original](#reset--reset-to-original)
 - [COUNT — Count records](#count--count-records)
 - [SCHEMA — View data schema](#schema--view-data-schema)
@@ -349,6 +350,32 @@ FLATTEN work
 
 ---
 
+## TRANSFORM — Transform records to maps
+
+Creates one output record per current record. The value in the `KEY` field becomes the output object's property name, and the `VALUE` field supplies its value. Paths through arrays of objects return an array of the matching values.
+
+```
+TRANSFORM TO-MAP KEY <key_field> VALUE <value_field>
+```
+
+For example, given a record with `sap_order_id` and an `assets` array:
+
+```
+TRANSFORM TO-MAP KEY sap_order_id VALUE assets.name
+```
+
+produces a record equivalent to:
+
+```json
+{
+  "000001810600": ["K06", "K610"]
+}
+```
+
+Each transform replaces the current records with the transformed records. Both paths must exist; the key value must be a non-null scalar. To map an entire array, use its field as the value path, for example `VALUE assets`.
+
+---
+
 ## RESET — Reset to original
 
 Discards all applied filters and transformations, restoring the full original dataset.
@@ -455,7 +482,7 @@ Press `Tab` at any point to trigger autocomplete.
 
 | Context | Suggestions |
 |---------|-------------|
-| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `RESET`, `COUNT`, `SCHEMA`, `INFO`, `EXIT` |
+| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `TRANSFORM`, `RESET`, `COUNT`, `SCHEMA`, `INFO`, `EXIT` |
 | After a command keyword | Field names from the current dataset schema |
 | After a dot in a field path | Nested field names (e.g. `address.` → `address.city`, `address.zip`) |
 | After `SORT <field>` | `ASC`, `DESC` |
