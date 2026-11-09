@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-09
+
 ### Changed
 
 - Unified command definitions across CLI execution, tab completion, and MCP tool exposure.
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Commands: WHERE, SELECT, EXCLUDE, SORT, SHOW, SAVE, FLATTEN, TRANSFORM, RESET, COUNT, SCHEMA, INFO, EXIT, and VERSION.
 - Tab completion for keywords, field names, and nested paths.
 
-[Unreleased]: https://github.com/alex-ermolaxe/qdata/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/alex-ermolaxe/qdata/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/alex-ermolaxe/qdata/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/alex-ermolaxe/qdata/compare/v1.1.5...v2.0.0
 [1.1.5]: https://github.com/alex-ermolaxe/qdata/releases/tag/v1.1.5
