@@ -1,31 +1,197 @@
-name: Create releases
+name: Create release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix (for example, 2.0.2)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v4
+      - name: Check out main
+        uses: actions/checkout@v4
         with:
-          go-version: '1.21'
+          fetch-depth: 0
+
+      - name: Check release request
+        id: request
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Releases must be started from the main branch." >&2
+            exit 1
+          fi
+
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must use MAJOR.MINOR.PATCH without a v prefix." >&2
+            exit 1
+          fi
+
+          tag="v${RELEASE_VERSION}"
+          if ! remote_tags=$(git ls-remote --tags origin "refs/tags/${tag}"); then
+            echo "Could not check whether tag ${tag} exists." >&2
+            exit 1
+          fi
+
+          if [[ -n "$remote_tags" ]]; then
+            git fetch origin "refs/tags/${tag}:refs/tags/${tag}"
+            tag_commit=$(git rev-parse "${tag}^{commit}")
+            if ! git merge-base --is-ancestor "$tag_commit" HEAD; then
+              echo "Tag ${tag} does not point to a commit on main." >&2
+              exit 1
+            fi
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out existing release tag
+        if: steps.request.outputs.tag_exists == 'true'
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          git checkout --detach "v${RELEASE_VERSION}"
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          version_source = Path("internal/version/version.go").read_text(encoding="utf-8")
+          if f'const Version = "{version}"' not in version_source:
+              raise SystemExit(f"Tag v{version} has a different application version.")
+
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          if not re.search(rf"(?m)^## \[{re.escape(version)}\](?: - .*)?$", changelog):
+              raise SystemExit(f"Tag v{version} has no matching changelog section.")
+          PY
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: Update version and changelog
+        if: steps.request.outputs.tag_exists != 'true'
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          python3 <<'PY'
+          import os
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"]
+          changelog_path = Path("CHANGELOG.md")
+          changelog = changelog_path.read_text(encoding="utf-8")
+          lines = changelog.splitlines()
+
+          unreleased_index = next(
+              (index for index, line in enumerate(lines) if line == "## [Unreleased]"),
+              None,
+          )
+          if unreleased_index is None:
+              raise SystemExit("CHANGELOG.md has no Unreleased section.")
+
+          next_section_index = next(
+              (
+                  index
+                  for index in range(unreleased_index + 1, len(lines))
+                  if lines[index].startswith("## [")
+              ),
+              len(lines),
+          )
+          unreleased_body = "\n".join(lines[unreleased_index + 1:next_section_index]).strip()
+          if not any(
+              line.strip() and not line.startswith("### ")
+              for line in unreleased_body.splitlines()
+          ):
+              raise SystemExit("The Unreleased section has no changelog entries.")
+
+          released_versions = re.findall(
+              r"^## \[(\d+\.\d+\.\d+)\](?: - .*)?$", changelog, re.MULTILINE
+          )
+          if not released_versions:
+              raise SystemExit("No previous versioned changelog section was found.")
+
+          previous_version = released_versions[0]
+          if tuple(map(int, version.split("."))) <= tuple(
+              map(int, previous_version.split("."))
+          ):
+              raise SystemExit(
+                  f"Version {version} must be greater than the latest changelog version "
+                  f"{previous_version}."
+              )
+
+          version_path = Path("internal/version/version.go")
+          version_source = version_path.read_text(encoding="utf-8")
+          version_pattern = re.compile(r'(?m)^const Version = "[^"]+"$')
+          version_source, replacements = version_pattern.subn(
+              f'const Version = "{version}"', version_source
+          )
+          if replacements != 1:
+              raise SystemExit("Could not uniquely update internal/version/version.go.")
+          version_path.write_text(version_source, encoding="utf-8")
+
+          release_date = datetime.now(timezone.utc).date().isoformat()
+          released_body = "\n".join(lines[unreleased_index + 1:next_section_index]).strip()
+          updated_lines = (
+              lines[:unreleased_index + 1]
+              + ["", f"## [{version}] - {release_date}", "", *released_body.splitlines(), ""]
+              + lines[next_section_index:]
+          )
+          changelog = "\n".join(updated_lines).rstrip() + "\n"
+
+          unreleased_reference = re.compile(r"(?m)^\[Unreleased\]: .*$")
+          if len(unreleased_reference.findall(changelog)) != 1:
+              raise SystemExit("Could not uniquely find the Unreleased reference link.")
+          if re.search(rf"(?m)^\[{re.escape(version)}\]:", changelog):
+              raise SystemExit(f"CHANGELOG.md already has a reference for {version}.")
+
+          unreleased_url = (
+              f"[Unreleased]: https://github.com/alex-ermolaxe/qdata/"
+              f"compare/v{version}...HEAD"
+          )
+          release_url = (
+              f"[{version}]: https://github.com/alex-ermolaxe/qdata/"
+              f"compare/v{previous_version}...v{version}"
+          )
+          changelog = unreleased_reference.sub(
+              f"{unreleased_url}\n{release_url}", changelog, count=1
+          )
+          changelog_path.write_text(changelog, encoding="utf-8")
+          PY
+
+      - name: Run tests
+        run: go test ./...
 
       - name: Build binaries
         run: |
           GOOS=darwin  GOARCH=arm64 go build -o qdata . && tar -czf qdata-darwin-arm64.tar.gz qdata && rm qdata
           GOOS=darwin  GOARCH=amd64 go build -o qdata . && tar -czf qdata-darwin-amd64.tar.gz qdata && rm qdata
-          GOOS=linux   GOARCH=amd64 go build -o qdata . && tar -czf qdata-linux-amd64.tar.gz  qdata && rm qdata
+          GOOS=linux   GOARCH=amd64 go build -o qdata . && tar -czf qdata-linux-amd64.tar.gz qdata && rm qdata
           GOOS=windows GOARCH=amd64 go build -o qdata.exe . && zip qdata-windows-amd64.zip qdata.exe && rm qdata.exe
 
       - name: Extract release notes
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          awk -v version="$VERSION" '
+          awk -v version="$RELEASE_VERSION" '
             index($0, "## [" version "]") == 1 &&
               (length($0) == length("## [" version "]") ||
                substr($0, length("## [" version "]") + 1, 3) == " - ") {
@@ -43,10 +209,26 @@ jobs:
           ' CHANGELOG.md > RELEASE_BODY.md
           cat RELEASE_BODY.md
 
-      - name: Create release
+      - name: Commit release metadata and tag
+        if: steps.request.outputs.tag_exists != 'true'
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add internal/version/version.go CHANGELOG.md
+          git commit -m "Release v${RELEASE_VERSION}"
+          git tag -a "v${RELEASE_VERSION}" -m "Release v${RELEASE_VERSION}"
+          git push --atomic origin HEAD:refs/heads/main "refs/tags/v${RELEASE_VERSION}"
+
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ inputs.version }}
+          name: qdata v${{ inputs.version }}
           body_path: RELEASE_BODY.md
+          overwrite_files: true
           files: |
             qdata-darwin-arm64.tar.gz
             qdata-darwin-amd64.tar.gz
