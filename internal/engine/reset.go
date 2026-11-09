@@ -15,5 +15,8 @@ var resetCommand = CommandSpec{
 
 func runResetCommand(e *Engine, _ string) (CommandResult, error) {
 	e.session.Reset()
-	return CommandResult{Output: fmt.Sprintf("✓ Reset to original: %d records\n", e.session.TotalRecords())}, nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Reset to original: %d records\n", recordCount)
+
+	return CommandResult{Output: output}, nil
 }

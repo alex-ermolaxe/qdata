@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/executor"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var showCommand = CommandSpec{
@@ -32,18 +32,18 @@ func runShowCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
+
 	return CommandResult{Output: output}, nil
 }
 
-func completeShow(input string, _ *schema.Schema) []string {
-	upperInput := strings.ToUpper(input)
-	parts := strings.Fields(strings.TrimLeft(upperInput, " "))
-	if len(parts) >= 2 && strings.HasSuffix(upperInput, " ") {
-		last := parts[len(parts)-1]
-		if last == "LIMIT" || last == "OFFSET" {
+func completeShow(context completer.CompletionContext) []string {
+	if len(context.Arguments) >= 1 && context.HasTrailingSpace {
+		lastArgument := context.Arguments[len(context.Arguments)-1]
+		if strings.EqualFold(lastArgument, "LIMIT") || strings.EqualFold(lastArgument, "OFFSET") {
 			return nil
 		}
 	}
+
 	return []string{"LIMIT", "OFFSET"}
 }
 

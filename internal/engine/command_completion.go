@@ -3,23 +3,17 @@ package engine
 import (
 	"strings"
 
-	"github.com/alex-ermolaxe/qdata/internal/schema"
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 )
 
-func completeFieldPaths(input string, currentSchema *schema.Schema) []string {
+func completeFieldPaths(context completer.CompletionContext) []string {
+	currentSchema := context.Schema
 	if currentSchema == nil {
 		return nil
 	}
 
-	trimmed := strings.TrimLeft(input, " ")
-	parts := strings.Fields(trimmed)
-	prefix := ""
-	if !strings.HasSuffix(input, " ") && len(parts) > 1 {
-		prefix = parts[len(parts)-1]
-	}
-
 	allPaths := currentSchema.AllPaths()
-	if strings.Contains(prefix, ".") {
+	if strings.Contains(context.CurrentWord, ".") {
 		return allPaths
 	}
 
@@ -29,5 +23,6 @@ func completeFieldPaths(input string, currentSchema *schema.Schema) []string {
 			topLevel = append(topLevel, path)
 		}
 	}
+
 	return topLevel
 }

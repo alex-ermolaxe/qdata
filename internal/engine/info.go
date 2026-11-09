@@ -32,5 +32,6 @@ func renderInfo() string {
 	for _, command := range commands {
 		fmt.Fprintf(&output, "  %-*s  %s\n", maxUsageWidth, command.Usage, command.Description)
 	}
+
 	return output.String()
 }

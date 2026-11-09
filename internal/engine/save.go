@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/format"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var saveCommand = CommandSpec{
@@ -36,17 +36,19 @@ func runSaveCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
+
 	return CommandResult{Output: output}, nil
 }
 
-func completeSave(input string, _ *schema.Schema) []string {
-	parts := strings.Fields(input)
-	if len(parts) >= 2 && strings.EqualFold(parts[len(parts)-1], "FORMAT") {
+func completeSave(context completer.CompletionContext) []string {
+	arguments := context.Arguments
+	if len(arguments) >= 1 && strings.EqualFold(arguments[len(arguments)-1], "FORMAT") {
 		return saveFormats
 	}
-	if len(parts) >= 3 && strings.EqualFold(parts[len(parts)-2], "FORMAT") {
+	if len(arguments) >= 2 && strings.EqualFold(arguments[len(arguments)-2], "FORMAT") {
 		return saveFormats
 	}
+
 	return nil
 }
 

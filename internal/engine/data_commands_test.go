@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 	"github.com/iancoleman/orderedmap"
@@ -69,6 +70,36 @@ func TestExcludeSortFlattenAndSchemaCommandSpecs(t *testing.T) {
 	})
 }
 
+func TestSchemaTracksArrayElementTypeAfterFlattenAndReset(t *testing.T) {
+	address := orderedmap.New()
+	address.Set("city", "Moscow")
+	record := format.NewRecord()
+	record.Set("address", address)
+	record.Set("tags", []any{"admin", "user"})
+	e := &Engine{session: NewSession("input.json", nil, []format.Record{record})}
+
+	assertTagsSchema := func(step string) {
+		t.Helper()
+		result, err := e.ExecuteCommand("SCHEMA")
+		if err != nil {
+			t.Fatalf("SCHEMA after %s error = %v", step, err)
+		}
+		if !strings.Contains(result.Output, "array<string>") {
+			t.Errorf("SCHEMA after %s = %q, want tags array<string>", step, result.Output)
+		}
+	}
+
+	if _, err := e.ExecuteCommand("FLATTEN address"); err != nil {
+		t.Fatalf("FLATTEN error = %v", err)
+	}
+	assertTagsSchema("FLATTEN")
+
+	if _, err := e.ExecuteCommand("RESET"); err != nil {
+		t.Fatalf("RESET error = %v", err)
+	}
+	assertTagsSchema("RESET")
+}
+
 func TestSortExcludeAndFlattenCompletion(t *testing.T) {
 	address := orderedmap.New()
 	address.Set("city", "Moscow")
@@ -77,16 +108,27 @@ func TestSortExcludeAndFlattenCompletion(t *testing.T) {
 	record.Set("address", address)
 	dataSchema := schema.Infer([]format.Record{record}, 100)
 
-	if got := completeSort("SORT ", dataSchema); !containsString(got, "id") {
+	if got := completeSort(completer.CompletionContext{
+		HasTrailingSpace: true,
+		Schema:           dataSchema,
+	}); !containsString(got, "id") {
 		t.Errorf("SORT field completions = %v, want id", got)
 	}
-	if got := completeSort("SORT id ", dataSchema); !containsString(got, "DESC") {
+	if got := completeSort(completer.CompletionContext{
+		Arguments:        []string{"id"},
+		HasTrailingSpace: true,
+		Schema:           dataSchema,
+	}); !containsString(got, "DESC") {
 		t.Errorf("SORT direction completions = %v, want DESC", got)
 	}
-	if got := completeExclude("EXCLUDE ", dataSchema); !containsString(got, "id") {
+	fieldContext := completer.CompletionContext{
+		HasTrailingSpace: true,
+		Schema:           dataSchema,
+	}
+	if got := excludeCommand.Completion(fieldContext); !containsString(got, "id") {
 		t.Errorf("EXCLUDE completions = %v, want id", got)
 	}
-	if got := completeFlatten("FLATTEN ", dataSchema); !containsString(got, "address") {
+	if got := flattenCommand.Completion(fieldContext); !containsString(got, "address") {
 		t.Errorf("FLATTEN completions = %v, want address", got)
 	}
 }

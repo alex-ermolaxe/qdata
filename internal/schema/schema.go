@@ -22,9 +22,11 @@ const (
 
 // Field - description of a schema field
 type Field struct {
-	Path     string    // full path: "address.city"
-	Type     FieldType // field type
-	Children []*Field  // nested fields (for objects)
+	Path           string    // full path: "address.city"
+	Type           FieldType // field type
+	ElementType    FieldType // inferred type of array elements
+	Children       []*Field  // nested fields (for objects)
+	hasElementType bool
 }
 
 // Schema - data schema, contains all fields
@@ -39,39 +41,7 @@ func (s *Schema) AllPaths() []string {
 	for path := range s.index {
 		paths = append(paths, path)
 	}
-	return paths
-}
 
-// Get returns a field by path
-func (s *Schema) Get(path string) (*Field, bool) {
-	f, ok := s.index[path]
-	return f, ok
-}
-
-// ChildPaths returns paths of child fields for the specified prefix
-// For example for "address" returns ["address.city", "address.zip"]
-func (s *Schema) ChildPaths(prefix string) []string {
-	var paths []string
-	for path := range s.index {
-		if len(path) > len(prefix)+1 &&
-			path[:len(prefix)] == prefix &&
-			path[len(prefix)] == '.' {
-			// Take only direct children
-			rest := path[len(prefix)+1:]
-			hasNested := false
-			for p := range s.index {
-				if len(p) > len(path)+1 &&
-					p[:len(path)] == path &&
-					p[len(path)] == '.' {
-					hasNested = true
-					break
-				}
-			}
-			_ = hasNested
-			_ = rest
-			paths = append(paths, path)
-		}
-	}
 	return paths
 }
 
@@ -118,8 +88,9 @@ func collectField(path string, value any, topLevel bool, schema *Schema) {
 	field, exists := schema.index[path]
 	if !exists {
 		field = &Field{
-			Path: path,
-			Type: inferType(value),
+			Path:        path,
+			Type:        inferType(value),
+			ElementType: TypeUnknown,
 		}
 		schema.index[path] = field
 		if topLevel {
@@ -136,6 +107,15 @@ func collectField(path string, value any, topLevel bool, schema *Schema) {
 		collectMapFields(nested, path, schema)
 	case []any:
 		for _, item := range nested {
+			itemType := inferType(item)
+			if itemType != TypeUnknown {
+				if !field.hasElementType {
+					field.ElementType = itemType
+					field.hasElementType = true
+				} else if field.ElementType != itemType {
+					field.ElementType = TypeUnknown
+				}
+			}
 			switch item.(type) {
 			case *orderedmap.OrderedMap, orderedmap.OrderedMap, map[string]any, []any:
 				collectField(path, item, false, schema)
@@ -168,15 +148,11 @@ func inferType(val any) FieldType {
 	}
 }
 
-// Print outputs the schema in a readable format
-func (s *Schema) Print() {
-	fmt.Print(s.Render())
-}
-
 // Render returns the schema in a readable format without writing to stdout.
 func (s *Schema) Render() string {
 	var output strings.Builder
 	renderFields(&output, s.Fields, s.index, 0)
+
 	return output.String()
 }
 
@@ -194,10 +170,11 @@ func renderFields(output *strings.Builder, fields []*Field, index map[string]*Fi
 		parts := Split(f.Path)
 		name := parts[len(parts)-1]
 
+		fieldType := renderType(f)
 		if f.Type == TypeObject {
 			fmt.Fprintf(output, "%s%s%s\n", indent.String(), prefix, name)
 		} else {
-			fmt.Fprintf(output, "%s%s%-20s %s\n", indent.String(), prefix, name, f.Type)
+			fmt.Fprintf(output, "%s%s%-20s %s\n", indent.String(), prefix, name, fieldType)
 		}
 
 		children := directChildren(f.Path, index)
@@ -205,6 +182,14 @@ func renderFields(output *strings.Builder, fields []*Field, index map[string]*Fi
 			renderFields(output, children, index, depth+1)
 		}
 	}
+}
+
+func renderType(field *Field) string {
+	if field.Type != TypeArray || field.ElementType == TypeUnknown {
+		return string(field.Type)
+	}
+
+	return fmt.Sprintf("%s<%s>", field.Type, field.ElementType)
 }
 
 func directChildren(parent string, index map[string]*Field) []*Field {
@@ -216,6 +201,7 @@ func directChildren(parent string, index map[string]*Field) []*Field {
 			children = append(children, field)
 		}
 	}
+
 	return children
 }
 
@@ -225,5 +211,6 @@ func containsDot(s string) bool {
 			return true
 		}
 	}
+
 	return false
 }

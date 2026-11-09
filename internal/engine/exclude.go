@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alex-ermolaxe/qdata/internal/executor"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var excludeCommand = CommandSpec{
@@ -13,7 +12,7 @@ var excludeCommand = CommandSpec{
 	Usage:       "EXCLUDE <field>[, <field> ...]",
 	Description: "Remove the specified fields from each record.",
 	Run:         runExcludeCommand,
-	Completion:  completeExclude,
+	Completion:  completeFieldPaths,
 	MCP: &MCPToolSpec{
 		Name:        "exclude",
 		Description: "Remove the specified comma-separated fields from each record. Nested fields can be addressed with dot paths.",
@@ -36,11 +35,8 @@ func runExcludeCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
-	return CommandResult{Output: output}, nil
-}
 
-func completeExclude(input string, currentSchema *schema.Schema) []string {
-	return completeFieldPaths(input, currentSchema)
+	return CommandResult{Output: output}, nil
 }
 
 func (e *Engine) handleExclude(args string) (string, error) {
@@ -49,5 +45,8 @@ func (e *Engine) handleExclude(args string) (string, error) {
 	e.session.Current = executor.Exclude(e.session.Current, fields)
 	e.session.UpdateSchema()
 
-	return fmt.Sprintf("✓ Applied EXCLUDE to %d records\n", e.session.TotalRecords()), nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Applied EXCLUDE to %d records\n", recordCount)
+
+	return output, nil
 }

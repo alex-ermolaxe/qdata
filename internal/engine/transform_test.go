@@ -107,11 +107,26 @@ func TestTransformAutocomplete(t *testing.T) {
 		input string
 		want  string
 	}{
-		{input: "TRANSFORM ", want: "TO-MAP"},
-		{input: "TRANSFORM TO-MAP ", want: "KEY"},
-		{input: "TRANSFORM TO-MAP KEY ", want: "sap_order_id"},
-		{input: "TRANSFORM TO-MAP KEY sap_order_id ", want: "VALUE"},
-		{input: "TRANSFORM TO-MAP KEY sap_order_id VALUE assets.", want: "name"},
+		{
+			input: "TRANSFORM ",
+			want:  "TO-MAP",
+		},
+		{
+			input: "TRANSFORM TO-MAP ",
+			want:  "KEY",
+		},
+		{
+			input: "TRANSFORM TO-MAP KEY ",
+			want:  "sap_order_id",
+		},
+		{
+			input: "TRANSFORM TO-MAP KEY sap_order_id ",
+			want:  "VALUE",
+		},
+		{
+			input: "TRANSFORM TO-MAP KEY sap_order_id VALUE assets.",
+			want:  "name",
+		},
 	}
 
 	for _, tt := range tests {

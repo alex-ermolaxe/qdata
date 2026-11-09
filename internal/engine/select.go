@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alex-ermolaxe/qdata/internal/executor"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var selectCommand = CommandSpec{
@@ -13,7 +12,7 @@ var selectCommand = CommandSpec{
 	Usage:       "SELECT <field>[, <field> ...] | *",
 	Description: "Keep only the specified fields in each record.",
 	Run:         runSelectCommand,
-	Completion:  completeSelect,
+	Completion:  completeFieldPaths,
 	MCP: &MCPToolSpec{
 		Name:        "select",
 		Description: "Keep only the specified comma-separated fields in each record. Supports nested dot paths and fields inside arrays of objects, such as items.name. Use * to retain all fields.",
@@ -36,11 +35,8 @@ func runSelectCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
-	return CommandResult{Output: output}, nil
-}
 
-func completeSelect(input string, currentSchema *schema.Schema) []string {
-	return completeFieldPaths(input, currentSchema)
+	return CommandResult{Output: output}, nil
 }
 
 func (e *Engine) handleSelect(args string) (string, error) {
@@ -50,5 +46,8 @@ func (e *Engine) handleSelect(args string) (string, error) {
 	e.session.Current = executor.Select(e.session.Current, fields)
 	e.session.UpdateSchema()
 
-	return fmt.Sprintf("✓ Applied SELECT to %d records (was: %d)\n", e.session.TotalRecords(), was), nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Applied SELECT to %d records (was: %d)\n", recordCount, was)
+
+	return output, nil
 }

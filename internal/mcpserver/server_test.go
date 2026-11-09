@@ -166,5 +166,6 @@ func resultText(t *testing.T, result *mcp.CallToolResult) string {
 	if !ok {
 		t.Fatalf("result content has type %T, want text", result.Content[0])
 	}
+
 	return content.Text
 }

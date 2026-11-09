@@ -6,7 +6,6 @@ import (
 
 	"github.com/alex-ermolaxe/qdata/internal/executor"
 	"github.com/alex-ermolaxe/qdata/internal/parser"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var whereCommand = CommandSpec{
@@ -14,7 +13,7 @@ var whereCommand = CommandSpec{
 	Usage:       "WHERE <condition> [AND|OR <condition> ...]",
 	Description: "Filter the current record set by a condition.",
 	Run:         runWhereCommand,
-	Completion:  completeWhere,
+	Completion:  completeFieldPaths,
 	MCP: &MCPToolSpec{
 		Name:        "where",
 		Description: `Filter records in a session. Syntax: <field> <operator> <value>, optionally combined with AND or OR. Operators: =, !=, >, <, >=, <=, ~, !~, ^, $, IN, EXISTS. Nested fields use dot paths (for example address.city). Example: status = "active" AND age >= 18.`,
@@ -37,11 +36,8 @@ func runWhereCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
-	return CommandResult{Output: output}, nil
-}
 
-func completeWhere(input string, currentSchema *schema.Schema) []string {
-	return completeFieldPaths(input, currentSchema)
+	return CommandResult{Output: output}, nil
 }
 
 func (e *Engine) handleWhere(args string) (string, error) {
@@ -58,5 +54,8 @@ func (e *Engine) handleWhere(args string) (string, error) {
 	}
 
 	e.session.Current = filtered
-	return fmt.Sprintf("✓ Found: %d records (was: %d)\n", e.session.TotalRecords(), was), nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Found: %d records (was: %d)\n", recordCount, was)
+
+	return output, nil
 }

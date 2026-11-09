@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 	"github.com/iancoleman/orderedmap"
@@ -16,7 +17,7 @@ func TestWhereCommandSpec(t *testing.T) {
 	inactive.Set("status", "inactive")
 	e := &Engine{session: NewSession("input.json", nil, []format.Record{active, inactive})}
 
-	result, err := e.ExecuteCommand(`WHERE status = "active"`)
+	result, err := e.ExecuteCommand(`  WHERE status = "active"  `)
 	if err != nil {
 		t.Fatalf("ExecuteCommand() error = %v", err)
 	}
@@ -40,12 +41,19 @@ func TestCompleteFieldPaths(t *testing.T) {
 	record.Set("address", address)
 	dataSchema := schema.Infer([]format.Record{record}, 100)
 
-	topLevel := completeFieldPaths("WHERE ", dataSchema)
+	topLevel := completeFieldPaths(completer.CompletionContext{
+		HasTrailingSpace: true,
+		Schema:           dataSchema,
+	})
 	if !containsString(topLevel, "status") || containsString(topLevel, "address.city") {
 		t.Errorf("top-level completions = %v, want top-level fields only", topLevel)
 	}
 
-	nested := completeFieldPaths("WHERE address.", dataSchema)
+	nested := completeFieldPaths(completer.CompletionContext{
+		Arguments:   []string{"address."},
+		CurrentWord: "address.",
+		Schema:      dataSchema,
+	})
 	if !containsString(nested, "address.city") {
 		t.Errorf("nested completions = %v, want address.city", nested)
 	}
@@ -57,5 +65,6 @@ func containsString(values []string, want string) bool {
 			return true
 		}
 	}
+
 	return false
 }

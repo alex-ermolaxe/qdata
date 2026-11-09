@@ -1,8 +1,6 @@
-# qdata MCP usage
+# Code readability
 
-- Start every workflow by calling `load` and retain the returned `session_id`.
-- Use a distinct session for each file when working with multiple datasets.
-- Inspect available fields with `schema` before writing filters or selecting fields.
-- After applying a filter with `where`, call `count` to verify the result size.
-- `where` syntax is `<field> <operator> <value>`; supported operators are `=`, `!=`, `>`, `<`, `>=`, `<=`, `~`, `!~`, `^`, `$`, `IN`, and `EXISTS`. Join conditions with `AND` or `OR`; address nested fields with dot paths such as `address.city`.
-- Pass the `session_id` to every tool that operates on a loaded dataset.
+- For new and modified code, prefer named intermediate variables when they make nested calls or multi-step return expressions easier to read and debug.
+- Keep error handling explicit; do not introduce trivial helper functions solely to shorten a return expression.
+- In Go, put a blank line immediately before `return` only when another statement precedes it in the same block (function body, conditional or loop body, switch or select case). Do not add a blank line when `return` is the block's first statement.
+- When a struct literal has more than one field, put each field on its own line.

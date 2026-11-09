@@ -14,5 +14,8 @@ var countCommand = CommandSpec{
 }
 
 func runCountCommand(e *Engine, _ string) (CommandResult, error) {
-	return CommandResult{Output: fmt.Sprintf("%d records\n", e.session.TotalRecords())}, nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("%d records\n", recordCount)
+
+	return CommandResult{Output: output}, nil
 }

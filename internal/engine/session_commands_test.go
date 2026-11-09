@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	formatjson "github.com/alex-ermolaxe/qdata/internal/format/json"
 )
@@ -75,13 +76,21 @@ func TestSaveCommandSpec(t *testing.T) {
 }
 
 func TestShowAndSaveCompletion(t *testing.T) {
-	if got := completeShow("SHOW ", nil); !containsString(got, "LIMIT") || !containsString(got, "OFFSET") {
+	if got := completeShow(completer.CompletionContext{
+		HasTrailingSpace: true,
+	}); !containsString(got, "LIMIT") || !containsString(got, "OFFSET") {
 		t.Errorf("SHOW completions = %v, want LIMIT and OFFSET", got)
 	}
-	if got := completeShow("SHOW LIMIT ", nil); len(got) != 0 {
+	if got := completeShow(completer.CompletionContext{
+		Arguments:        []string{"LIMIT"},
+		HasTrailingSpace: true,
+	}); len(got) != 0 {
 		t.Errorf("SHOW completions after LIMIT = %v, want none", got)
 	}
-	if got := completeSave("SAVE FORMAT ", nil); !containsString(got, "json") {
+	if got := completeSave(completer.CompletionContext{
+		Arguments:        []string{"FORMAT"},
+		HasTrailingSpace: true,
+	}); !containsString(got, "json") {
 		t.Errorf("SAVE completions = %v, want available formats", got)
 	}
 }

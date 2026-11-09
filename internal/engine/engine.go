@@ -21,11 +21,6 @@ type Engine struct {
 	saveConfirmation func(string) bool
 }
 
-// New creates a new Engine, loads a file and builds a session
-func New(filePath string, formatName string) (*Engine, error) {
-	return NewFromFile(filePath, formatName)
-}
-
 // NewFromFile creates an Engine from a file path and optional format name.
 func NewFromFile(filePath string, formatName string) (*Engine, error) {
 	// Determine format
@@ -112,8 +107,10 @@ func (e *Engine) Run() error {
 			// Ctrl+D or Ctrl+C
 			if err == readline.ErrInterrupt || err == io.EOF {
 				fmt.Println("\nBye!")
+
 				return nil
 			}
+
 			return err
 		}
 
@@ -134,32 +131,33 @@ func (e *Engine) handleCommand(input string) bool {
 	result, err := e.ExecuteCommand(input)
 	if err != nil {
 		fmt.Printf("error: %s\n", err)
+
 		return false
 	}
 	fmt.Print(result.Output)
+
 	return result.Exit
 }
 
 // ExecuteCommand runs a command without writing command output to stdout.
 func (e *Engine) ExecuteCommand(input string) (CommandResult, error) {
-	parts := strings.Fields(input)
-	if len(parts) == 0 {
+	parsed, ok := parseCommandInput(input)
+	if !ok {
 		return CommandResult{}, nil
 	}
 
-	command := strings.ToUpper(parts[0])
-	args := strings.TrimSpace(input[len(parts[0]):])
-
 	for _, spec := range CommandSpecs() {
-		if spec.Name != command {
+		if spec.Name != parsed.name {
 			continue
 		}
 		if spec.Run == nil {
-			return CommandResult{}, fmt.Errorf("command %s has no handler", command)
+			return CommandResult{}, fmt.Errorf("command %s has no handler", parsed.name)
 		}
-		return spec.Run(e, args)
+
+		return spec.Run(e, parsed.args)
 	}
-	return CommandResult{}, fmt.Errorf("unknown command: %s", command)
+
+	return CommandResult{}, fmt.Errorf("unknown command: %s", parsed.name)
 }
 
 // splitFields splits field string by comma
@@ -172,5 +170,6 @@ func splitFields(args string) []string {
 			fields = append(fields, field)
 		}
 	}
+
 	return fields
 }

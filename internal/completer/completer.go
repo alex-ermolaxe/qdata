@@ -9,7 +9,15 @@ import (
 )
 
 // CompletionFunc returns candidates for the input text before the cursor.
-type CompletionFunc func(input string, schema *schema.Schema) []string
+type CompletionFunc func(context CompletionContext) []string
+
+// CompletionContext contains the parsed input needed by a completion strategy.
+type CompletionContext struct {
+	Arguments        []string
+	CurrentWord      string
+	HasTrailingSpace bool
+	Schema           *schema.Schema
+}
 
 // CommandCompletion supplies a command name and its argument completion strategy.
 type CommandCompletion struct {
@@ -37,35 +45,41 @@ func New(schemaGetter func() *schema.Schema, commands []CommandCompletion) *Comp
 			completer.commandCompletion[command.Name] = command.Complete
 		}
 	}
+
 	return completer
 }
 
 // Do implements readline.AutoCompleter interface
 func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	original := string(line[:pos])
-	input := strings.ToUpper(original)
-	trimmed := strings.TrimLeft(input, " ")
+	trimmed := strings.TrimLeft(original, " ")
 	parts := strings.Fields(trimmed)
 
 	if len(parts) == 0 {
 		return toRunes(c.commandNames), 0
 	}
 
-	// lastWord is taken from original to preserve case
-	originalTrimmed := strings.TrimLeft(original, " ")
-	originalParts := strings.Fields(originalTrimmed)
-	lastWord := ""
-	if !strings.HasSuffix(original, " ") && len(originalParts) > 0 {
-		lastWord = originalParts[len(originalParts)-1]
+	hasTrailingSpace := strings.HasSuffix(original, " ")
+	currentWord := ""
+	if !hasTrailingSpace {
+		currentWord = parts[len(parts)-1]
 	}
 
-	if len(parts) == 1 && !strings.HasSuffix(input, " ") {
-		return completeFrom(c.commandNames, lastWord)
+	if len(parts) == 1 && !hasTrailingSpace {
+		return completeFrom(c.commandNames, currentWord)
 	}
 
-	command := parts[0]
+	command := strings.ToUpper(parts[0])
 	if completion := c.commandCompletion[command]; completion != nil {
-		return completeFrom(completion(original, c.schemaGetter()), lastWord)
+		context := CompletionContext{
+			Arguments:        parts[1:],
+			CurrentWord:      currentWord,
+			HasTrailingSpace: hasTrailingSpace,
+			Schema:           c.schemaGetter(),
+		}
+		options := completion(context)
+
+		return completeFrom(options, context.CurrentWord)
 	}
 
 	return nil, 0
@@ -108,6 +122,7 @@ func toRunes(options []string) [][]rune {
 	for i, opt := range options {
 		result[i] = []rune(opt)
 	}
+
 	return result
 }
 
@@ -115,6 +130,7 @@ func isLower(s string) bool {
 	if s == "" {
 		return false
 	}
+
 	return unicode.IsLower(rune(s[0]))
 }
 

@@ -26,11 +26,16 @@ type sessionInfo struct {
 	RecordCount int    `json:"record_count"`
 }
 
+const serverInstructions = `Start each workflow by calling load and retain the returned session_id. Use a distinct session for each file, and pass its session_id to every subsequent tool call.
+Use schema to inspect available fields before writing filters or selecting fields. After applying a where filter, call count to verify the result size.
+where syntax is <field> <operator> <value>. Supported operators are =, !=, >, <, >=, <=, ~, !~, ^, $, IN, and EXISTS. Join conditions with AND or OR, and address nested fields with dot paths such as address.city.`
+
 // Serve starts qdata's MCP server on stdio.
 func Serve() error {
 	srv := &mcpServer{sessions: make(map[string]*engine.Engine)}
-	mcpSrv := server.NewMCPServer("qdata", version.Version)
+	mcpSrv := server.NewMCPServer("qdata", version.Version, server.WithInstructions(serverInstructions))
 	srv.registerTools(mcpSrv)
+
 	return server.ServeStdio(mcpSrv)
 }
 
@@ -87,6 +92,7 @@ func (srv *mcpServer) load(_ context.Context, request mcp.CallToolRequest) (*mcp
 		FilePath:    eng.FilePath(),
 		RecordCount: eng.RecordCount(),
 	}
+
 	return jsonResult(response)
 }
 
@@ -105,6 +111,7 @@ func (srv *mcpServer) listSessions(_ context.Context, _ mcp.CallToolRequest) (*m
 			RecordCount: eng.RecordCount(),
 		})
 	}
+
 	return jsonResult(sessions)
 }
 
@@ -116,10 +123,14 @@ func (srv *mcpServer) closeSession(_ context.Context, request mcp.CallToolReques
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	if _, exists := srv.sessions[sessionID]; !exists {
-		return errorResult(fmt.Errorf("unknown session_id %q", sessionID)), nil
+		err := fmt.Errorf("unknown session_id %q", sessionID)
+
+		return errorResult(err), nil
 	}
 	delete(srv.sessions, sessionID)
-	return textResult(fmt.Sprintf("Closed session %q.", sessionID)), nil
+	message := fmt.Sprintf("Closed session %q.", sessionID)
+
+	return textResult(message), nil
 }
 
 func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.CommandSpec) {
@@ -149,7 +160,9 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.Comma
 		defer srv.mu.Unlock()
 		eng, exists := srv.sessions[sessionID]
 		if !exists {
-			return errorResult(fmt.Errorf("unknown session_id %q", sessionID)), nil
+			err := fmt.Errorf("unknown session_id %q", sessionID)
+
+			return errorResult(err), nil
 		}
 
 		line := spec.Name
@@ -169,6 +182,7 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.Comma
 		if err != nil {
 			return errorResult(err), nil
 		}
+
 		return textResult(result.Output), nil
 	})
 }
@@ -193,6 +207,7 @@ func jsonResult(value any) (*mcp.CallToolResult, error) {
 	if err != nil {
 		return errorResult(err), nil
 	}
+
 	return textResult(string(data)), nil
 }
 

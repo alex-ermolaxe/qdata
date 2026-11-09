@@ -3,6 +3,7 @@ package engine
 import (
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/schema"
 	"github.com/iancoleman/orderedmap"
@@ -36,7 +37,11 @@ func TestSelectCommandCompletion(t *testing.T) {
 	record.Set("address", address)
 	dataSchema := schema.Infer([]format.Record{record}, 100)
 
-	got := selectCommand.Completion("SELECT address.", dataSchema)
+	got := selectCommand.Completion(completer.CompletionContext{
+		Arguments:   []string{"address."},
+		CurrentWord: "address.",
+		Schema:      dataSchema,
+	})
 	if !containsString(got, "address.city") {
 		t.Errorf("SELECT completions = %v, want address.city", got)
 	}

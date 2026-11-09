@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/executor"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var sortCommand = CommandSpec{
@@ -38,20 +38,19 @@ func runSortCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
+
 	return CommandResult{Output: output}, nil
 }
 
-func completeSort(input string, currentSchema *schema.Schema) []string {
-	upperInput := strings.ToUpper(input)
-	parts := strings.Fields(strings.TrimLeft(upperInput, " "))
+func completeSort(context completer.CompletionContext) []string {
+	if len(context.Arguments) >= 1 && context.HasTrailingSpace {
+		return sortDirections
+	}
+	if len(context.Arguments) == 2 {
+		return sortDirections
+	}
 
-	if len(parts) >= 2 && strings.HasSuffix(input, " ") {
-		return sortDirections
-	}
-	if len(parts) == 3 {
-		return sortDirections
-	}
-	return completeFieldPaths(input, currentSchema)
+	return completeFieldPaths(context)
 }
 
 func (e *Engine) handleSort(args string) (string, error) {
@@ -78,5 +77,8 @@ func (e *Engine) handleSort(args string) (string, error) {
 
 	e.session.Current = sorted
 
-	return fmt.Sprintf("✓ Sorted %d records by %q %s\n", e.session.TotalRecords(), field, direction), nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Sorted %d records by %q %s\n", recordCount, field, direction)
+
+	return output, nil
 }

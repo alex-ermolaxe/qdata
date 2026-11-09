@@ -63,5 +63,6 @@ func ConfirmOverwrite(path string) bool {
 	}
 
 	response = strings.TrimSpace(strings.ToLower(response))
+
 	return response == "y" || response == "yes"
 }

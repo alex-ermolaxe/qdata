@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/executor"
-	"github.com/alex-ermolaxe/qdata/internal/schema"
 )
 
 var transformCommand = CommandSpec{
@@ -36,31 +36,31 @@ func runTransformCommand(e *Engine, args string) (CommandResult, error) {
 	if err != nil {
 		return CommandResult{}, err
 	}
+
 	return CommandResult{Output: output}, nil
 }
 
-func completeTransform(input string, currentSchema *schema.Schema) []string {
-	upperInput := strings.ToUpper(input)
-	parts := strings.Fields(strings.TrimLeft(upperInput, " "))
+func completeTransform(context completer.CompletionContext) []string {
+	arguments := context.Arguments
 	switch {
-	case len(parts) == 1:
+	case len(arguments) == 0:
 		return []string{"TO-MAP"}
-	case len(parts) == 2:
-		if strings.HasSuffix(input, " ") {
+	case len(arguments) == 1:
+		if context.HasTrailingSpace {
 			return []string{"KEY"}
 		}
 		return []string{"TO-MAP"}
-	case len(parts) == 3 && strings.EqualFold(parts[2], "KEY"):
-		return completeFieldPaths(input, currentSchema)
-	case len(parts) == 4:
-		if strings.HasSuffix(input, " ") {
+	case len(arguments) == 2 && strings.EqualFold(arguments[1], "KEY"):
+		return completeFieldPaths(context)
+	case len(arguments) == 3:
+		if context.HasTrailingSpace {
 			return []string{"VALUE"}
 		}
-		return completeFieldPaths(input, currentSchema)
-	case len(parts) == 5 && strings.EqualFold(parts[4], "VALUE"):
-		return completeFieldPaths(input, currentSchema)
-	case len(parts) == 6 && strings.EqualFold(parts[4], "VALUE"):
-		return completeFieldPaths(input, currentSchema)
+		return completeFieldPaths(context)
+	case len(arguments) == 4 && strings.EqualFold(arguments[3], "VALUE"):
+		return completeFieldPaths(context)
+	case len(arguments) == 5 && strings.EqualFold(arguments[3], "VALUE"):
+		return completeFieldPaths(context)
 	default:
 		return nil
 	}
@@ -76,6 +76,7 @@ func parseTransformArgs(args string) (string, string, error) {
 		parts[4] == "" {
 		return "", "", fmt.Errorf("TRANSFORM syntax: TRANSFORM TO-MAP KEY <key_field> VALUE <value_field>")
 	}
+
 	return parts[2], parts[4], nil
 }
 
@@ -87,5 +88,8 @@ func (e *Engine) handleTransformToMap(keyPath, valuePath string) (string, error)
 
 	e.session.Current = transformed
 	e.session.UpdateSchema()
-	return fmt.Sprintf("✓ Transformed %d records to maps\n", e.session.TotalRecords()), nil
+	recordCount := e.session.TotalRecords()
+	output := fmt.Sprintf("✓ Transformed %d records to maps\n", recordCount)
+
+	return output, nil
 }

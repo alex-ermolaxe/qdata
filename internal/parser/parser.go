@@ -93,6 +93,7 @@ func parseCondition(input string) (*Condition, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		return &Condition{
 			Field:    field,
 			Operator: op,
@@ -163,6 +164,7 @@ func parseValue(s string) (any, error) {
 	}
 
 	// String without quotes
+
 	return s, nil
 }
 

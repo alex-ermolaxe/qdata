@@ -279,6 +279,7 @@ func TestFlatten(t *testing.T) {
 				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
 					t.Errorf("expected error containing %q, got %q", tt.errContains, err.Error())
 				}
+
 				return
 			}
 
@@ -365,6 +366,7 @@ func createTestRecord(data map[string]any) format.Record {
 			record.Set(k, v)
 		}
 	}
+
 	return record
 }
 
@@ -377,6 +379,7 @@ func convertToOrderedMap(data map[string]any) *orderedmap.OrderedMap {
 			om.Set(k, v)
 		}
 	}
+
 	return om
 }
 
@@ -385,6 +388,7 @@ func assertFieldValue(t *testing.T, record format.Record, fieldName string, expe
 	value, exists := record.Get(fieldName)
 	if !exists {
 		t.Errorf("field %q not found", fieldName)
+
 		return
 	}
 	if value != expectedValue {
@@ -398,5 +402,6 @@ func contains(s, substr string) bool {
 			return true
 		}
 	}
+
 	return false
 }
