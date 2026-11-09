@@ -1,11 +1,48 @@
 package schema
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/iancoleman/orderedmap"
 )
+
+func TestInferPrimitiveArrayElementType(t *testing.T) {
+	emptyTags := format.NewRecord()
+	emptyTags.Set("tags", []any{})
+	populatedTags := format.NewRecord()
+	populatedTags.Set("tags", []any{"admin", "user"})
+
+	got := Infer([]format.Record{emptyTags, populatedTags}, 100)
+	field := got.index["tags"]
+	if field == nil {
+		t.Fatal("schema is missing tags field")
+	}
+	if field.Type != TypeArray {
+		t.Errorf("tags type = %q, want %q", field.Type, TypeArray)
+	}
+	if field.ElementType != TypeString {
+		t.Errorf("tags element type = %q, want %q", field.ElementType, TypeString)
+	}
+	if !strings.Contains(got.Render(), "array<string>") {
+		t.Errorf("rendered schema = %q, want array<string>", got.Render())
+	}
+}
+
+func TestInferMixedArrayElementTypeAsUnknown(t *testing.T) {
+	record := format.NewRecord()
+	record.Set("tags", []any{"admin", 1})
+
+	got := Infer([]format.Record{record}, 100)
+	field := got.index["tags"]
+	if field == nil {
+		t.Fatal("schema is missing tags field")
+	}
+	if field.ElementType != TypeUnknown {
+		t.Errorf("tags element type = %q, want %q", field.ElementType, TypeUnknown)
+	}
+}
 
 func TestInferFieldsFromObjectArray(t *testing.T) {
 	first := orderedmap.New()
@@ -35,8 +72,14 @@ func TestInferFieldsFromObjectArray(t *testing.T) {
 		}
 	}
 
-	field, ok := got.Get("items")
-	if !ok {
+	var field *Field
+	for _, topLevelField := range got.Fields {
+		if topLevelField.Path == "items" {
+			field = topLevelField
+			break
+		}
+	}
+	if field == nil {
 		t.Fatal("schema is missing top-level items field")
 	}
 	if field.Type != TypeArray {

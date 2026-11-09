@@ -8,135 +8,81 @@ import (
 	"github.com/chzyer/readline"
 )
 
-// keywords - list of available commands
-var keywords = []string{
-	"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW",
-	"SAVE", "RESET", "COUNT", "SCHEMA", "FLATTEN", "TRANSFORM", "INFO", "EXIT",
+// CompletionFunc returns candidates for the input text before the cursor.
+type CompletionFunc func(context CompletionContext) []string
+
+// CompletionContext contains the parsed input needed by a completion strategy.
+type CompletionContext struct {
+	Arguments        []string
+	CurrentWord      string
+	HasTrailingSpace bool
+	Schema           *schema.Schema
 }
 
-// sortDirections - sort directions
-var sortDirections = []string{"ASC", "DESC"}
-
-// saveFormats - available save formats
-var saveFormats = []string{"json", "xml", "csv"}
+// CommandCompletion supplies a command name and its argument completion strategy.
+type CommandCompletion struct {
+	Name     string
+	Complete CompletionFunc
+}
 
 // Completer - implements readline.AutoCompleter
 type Completer struct {
-	schemaGetter func() *schema.Schema
+	schemaGetter      func() *schema.Schema
+	commandNames      []string
+	commandCompletion map[string]CompletionFunc
 }
 
-// New creates a new Completer based on schema getter function
-func New(schemaGetter func() *schema.Schema) *Completer {
-	return &Completer{schemaGetter: schemaGetter}
+// New creates a Completer using the schema getter and command-specific strategies.
+func New(schemaGetter func() *schema.Schema, commands []CommandCompletion) *Completer {
+	completer := &Completer{
+		schemaGetter:      schemaGetter,
+		commandNames:      make([]string, 0, len(commands)),
+		commandCompletion: make(map[string]CompletionFunc, len(commands)),
+	}
+	for _, command := range commands {
+		completer.commandNames = append(completer.commandNames, command.Name)
+		if command.Complete != nil {
+			completer.commandCompletion[command.Name] = command.Complete
+		}
+	}
+
+	return completer
 }
 
 // Do implements readline.AutoCompleter interface
 func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	original := string(line[:pos])
-	input := strings.ToUpper(original)
-	trimmed := strings.TrimLeft(input, " ")
+	trimmed := strings.TrimLeft(original, " ")
 	parts := strings.Fields(trimmed)
 
 	if len(parts) == 0 {
-		return toRunes(keywords), 0
+		return toRunes(c.commandNames), 0
 	}
 
-	// lastWord is taken from original to preserve case
-	originalTrimmed := strings.TrimLeft(original, " ")
-	originalParts := strings.Fields(originalTrimmed)
-	lastWord := ""
-	if !strings.HasSuffix(original, " ") && len(originalParts) > 0 {
-		lastWord = originalParts[len(originalParts)-1]
+	hasTrailingSpace := strings.HasSuffix(original, " ")
+	currentWord := ""
+	if !hasTrailingSpace {
+		currentWord = parts[len(parts)-1]
 	}
 
-	if len(parts) == 1 && !strings.HasSuffix(input, " ") {
-		return completeFrom(keywords, lastWord)
+	if len(parts) == 1 && !hasTrailingSpace {
+		return completeFrom(c.commandNames, currentWord)
 	}
 
-	command := parts[0]
+	command := strings.ToUpper(parts[0])
+	if completion := c.commandCompletion[command]; completion != nil {
+		context := CompletionContext{
+			Arguments:        parts[1:],
+			CurrentWord:      currentWord,
+			HasTrailingSpace: hasTrailingSpace,
+			Schema:           c.schemaGetter(),
+		}
+		options := completion(context)
 
-	switch command {
-	case "WHERE", "SELECT", "EXCLUDE", "FLATTEN":
-		return c.completeFields(lastWord)
-	case "TRANSFORM":
-		switch {
-		case len(parts) == 1:
-			return completeFrom([]string{"TO-MAP"}, "")
-		case len(parts) == 2:
-			if strings.HasSuffix(input, " ") {
-				return completeFrom([]string{"KEY"}, "")
-			}
-			return completeFrom([]string{"TO-MAP"}, lastWord)
-		case len(parts) == 3 && strings.EqualFold(parts[2], "KEY"):
-			return c.completeFields("")
-		case len(parts) == 4:
-			if strings.HasSuffix(input, " ") {
-				return completeFrom([]string{"VALUE"}, "")
-			}
-			return c.completeFields(lastWord)
-		case len(parts) == 5 && strings.EqualFold(parts[4], "VALUE"):
-			return c.completeFields("")
-		case len(parts) == 6 && strings.EqualFold(parts[4], "VALUE"):
-			return c.completeFields(lastWord)
-		}
-	case "SORT":
-		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
-			return completeFrom(sortDirections, "")
-		}
-		if len(parts) == 3 {
-			return completeFrom(sortDirections, lastWord)
-		}
-		return c.completeFields(lastWord)
-	case "SAVE":
-		if len(parts) >= 2 && strings.ToUpper(parts[len(parts)-1]) == "FORMAT" {
-			return completeFrom(saveFormats, "")
-		}
-		if len(parts) >= 3 && strings.ToUpper(parts[len(parts)-2]) == "FORMAT" {
-			return completeFrom(saveFormats, lastWord)
-		}
-	case "SHOW":
-		if len(parts) >= 2 && strings.HasSuffix(input, " ") {
-			last := strings.ToUpper(parts[len(parts)-1])
-			if last == "LIMIT" || last == "OFFSET" {
-				return nil, 0 // after LIMIT/OFFSET we expect a number
-			}
-			return completeFrom([]string{"LIMIT", "OFFSET"}, "")
-		}
-		if !strings.HasSuffix(input, " ") && len(parts) >= 2 {
-			return completeFrom([]string{"LIMIT", "OFFSET"}, lastWord)
-		}
-		return completeFrom([]string{"LIMIT", "OFFSET"}, "")
+		return completeFrom(options, context.CurrentWord)
 	}
 
 	return nil, 0
-}
-
-// completeFields suggests schema fields considering nesting
-func (c *Completer) completeFields(prefix string) ([][]rune, int) {
-	schema := c.schemaGetter()
-	allPaths := schema.AllPaths()
-	upperPrefix := strings.ToUpper(prefix)
-
-	// If there's a dot - suggest only nested fields of the appropriate parent
-	if dotIdx := strings.LastIndex(upperPrefix, "."); dotIdx >= 0 {
-		var matches []string
-		for _, path := range allPaths {
-			if strings.HasPrefix(strings.ToUpper(path), upperPrefix) {
-				matches = append(matches, path)
-			}
-		}
-		return completeFrom(matches, prefix)
-	}
-
-	// Otherwise suggest all top-level fields
-	var topLevel []string
-	for _, path := range allPaths {
-		if !strings.Contains(path, ".") {
-			topLevel = append(topLevel, path)
-		}
-	}
-
-	return completeFrom(topLevel, prefix)
 }
 
 // completeFrom filters the list by prefix and returns suitable options
@@ -176,6 +122,7 @@ func toRunes(options []string) [][]rune {
 	for i, opt := range options {
 		result[i] = []rune(opt)
 	}
+
 	return result
 }
 
@@ -183,6 +130,7 @@ func isLower(s string) bool {
 	if s == "" {
 		return false
 	}
+
 	return unicode.IsLower(rune(s[0]))
 }
 

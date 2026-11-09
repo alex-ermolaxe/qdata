@@ -59,6 +59,7 @@ func matchCondition(record format.Record, condition parser.Condition) (bool, err
 	// EXISTS - just check if the field exists
 	if condition.Operator == parser.OpExists {
 		_, exists := schema.GetNested(record, condition.Field)
+
 		return exists, nil
 	}
 
@@ -85,34 +86,47 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 		if !ok {
 			return false, nil
 		}
-		return strings.Contains(strings.ToLower(fs), strings.ToLower(cs)), nil
+		fieldString := strings.ToLower(fs)
+		conditionString := strings.ToLower(cs)
+
+		return strings.Contains(fieldString, conditionString), nil
 
 	case parser.OpNotContains:
 		fs, cs, ok := toStrings(fieldVal, condVal)
 		if !ok {
 			return false, nil
 		}
-		return !strings.Contains(strings.ToLower(fs), strings.ToLower(cs)), nil
+		fieldString := strings.ToLower(fs)
+		conditionString := strings.ToLower(cs)
+
+		return !strings.Contains(fieldString, conditionString), nil
 
 	case parser.OpStartsWith:
 		fs, cs, ok := toStrings(fieldVal, condVal)
 		if !ok {
 			return false, nil
 		}
-		return strings.HasPrefix(strings.ToLower(fs), strings.ToLower(cs)), nil
+		fieldString := strings.ToLower(fs)
+		conditionString := strings.ToLower(cs)
+
+		return strings.HasPrefix(fieldString, conditionString), nil
 
 	case parser.OpEndsWith:
 		fs, cs, ok := toStrings(fieldVal, condVal)
 		if !ok {
 			return false, nil
 		}
-		return strings.HasSuffix(strings.ToLower(fs), strings.ToLower(cs)), nil
+		fieldString := strings.ToLower(fs)
+		conditionString := strings.ToLower(cs)
+
+		return strings.HasSuffix(fieldString, conditionString), nil
 
 	case parser.OpGreater:
 		fn, cn, ok := toNumbers(fieldVal, condVal)
 		if !ok {
 			return false, nil
 		}
+
 		return fn > cn, nil
 
 	case parser.OpLess:
@@ -120,6 +134,7 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 		if !ok {
 			return false, nil
 		}
+
 		return fn < cn, nil
 
 	case parser.OpGreaterOrEqual:
@@ -127,6 +142,7 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 		if !ok {
 			return false, nil
 		}
+
 		return fn >= cn, nil
 
 	case parser.OpLessOrEqual:
@@ -134,6 +150,7 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 		if !ok {
 			return false, nil
 		}
+
 		return fn <= cn, nil
 
 	case parser.OpIn:
@@ -146,6 +163,7 @@ func compare(fieldVal any, op parser.Operator, condVal any) (bool, error) {
 				return true, nil
 			}
 		}
+
 		return false, nil
 	}
 
@@ -162,6 +180,7 @@ func equalValues(a, b any) bool {
 	}
 
 	// Strings
+
 	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 }
 
@@ -169,6 +188,7 @@ func equalValues(a, b any) bool {
 func toStrings(a, b any) (string, string, bool) {
 	as, aok := a.(string)
 	bs, bok := b.(string)
+
 	return as, bs, aok && bok
 }
 
@@ -176,6 +196,7 @@ func toStrings(a, b any) (string, string, bool) {
 func toNumbers(a, b any) (float64, float64, bool) {
 	an, aok := toFloat(a)
 	bn, bok := toFloat(b)
+
 	return an, bn, aok && bok
 }
 
@@ -191,5 +212,6 @@ func toFloat(v any) (float64, bool) {
 	case int64:
 		return float64(val), true
 	}
+
 	return 0, false
 }

@@ -4,41 +4,56 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alex-ermolaxe/qdata/internal/format"
 	"github.com/alex-ermolaxe/qdata/internal/schema"
-	"github.com/iancoleman/orderedmap"
 )
 
-func TestTransformAutocomplete(t *testing.T) {
-	asset := orderedmap.New()
-	asset.Set("name", "K06")
-	record := format.NewRecord()
-	record.Set("sap_order_id", "order-1")
-	record.Set("assets", []any{asset})
-	dataSchema := schema.Infer([]format.Record{record}, 100)
-	completer := New(func() *schema.Schema { return dataSchema })
+func TestCommandCompletionStrategy(t *testing.T) {
+	completer := New(
+		func() *schema.Schema { return nil },
+		[]CommandCompletion{{
+			Name: "WHERE",
+			Complete: func(CompletionContext) []string {
+				return []string{"status"}
+			},
+		}},
+	)
 
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{input: "TRANSFORM ", want: "TO-MAP"},
-		{input: "TRANSFORM TO-MAP ", want: "KEY"},
-		{input: "TRANSFORM TO-MAP KEY ", want: "sap_order_id"},
-		{input: "TRANSFORM TO-MAP KEY sap_order_id ", want: "VALUE"},
-		{input: "TRANSFORM TO-MAP KEY sap_order_id VALUE assets.", want: "name"},
+	got, _ := completer.Do([]rune("WHERE st"), len([]rune("WHERE st")))
+	if len(got) != 1 || string(got[0]) != "atus" {
+		t.Errorf("command-specific completion = %q, want [atus]", suggestions(got))
+	}
+}
+
+func TestDoBuildsCompletionContext(t *testing.T) {
+	currentSchema := &schema.Schema{}
+	var got CompletionContext
+	completer := New(
+		func() *schema.Schema { return currentSchema },
+		[]CommandCompletion{{
+			Name: "WHERE",
+			Complete: func(context CompletionContext) []string {
+				got = context
+				return nil
+			},
+		}},
+	)
+
+	input := []rune("  WHERE sta")
+	completer.Do(input, len(input))
+	if got.CurrentWord != "sta" || len(got.Arguments) != 1 || got.Arguments[0] != "sta" {
+		t.Errorf("completion context for partial input = %#v, want current word and argument sta", got)
+	}
+	if got.HasTrailingSpace {
+		t.Error("completion context for partial input has trailing space")
+	}
+	if got.Schema != currentSchema {
+		t.Errorf("completion context schema = %p, want %p", got.Schema, currentSchema)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got, _ := completer.Do([]rune(tt.input), len([]rune(tt.input)))
-			for _, suggestion := range got {
-				if string(suggestion) == tt.want {
-					return
-				}
-			}
-			t.Errorf("autocomplete for %q = %q, want suggestion %q", tt.input, suggestions(got), tt.want)
-		})
+	input = []rune("WHERE ")
+	completer.Do(input, len(input))
+	if got.CurrentWord != "" || len(got.Arguments) != 0 || !got.HasTrailingSpace {
+		t.Errorf("completion context after command = %#v, want empty arguments and trailing space", got)
 	}
 }
 
@@ -47,5 +62,6 @@ func suggestions(options [][]rune) string {
 	for i, option := range options {
 		values[i] = string(option)
 	}
+
 	return strings.Join(values, ", ")
 }

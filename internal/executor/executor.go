@@ -8,16 +8,6 @@ import (
 	"github.com/alex-ermolaxe/qdata/internal/format"
 )
 
-// Show outputs records to terminal
-func Show(records []format.Record, limit int, offset int) error {
-	output, err := RenderShow(records, limit, offset)
-	if err != nil {
-		return err
-	}
-	fmt.Print(output)
-	return nil
-}
-
 // RenderShow formats records for display without writing to stdout.
 func RenderShow(records []format.Record, limit int, offset int) (string, error) {
 	total := len(records)
@@ -44,5 +34,6 @@ func RenderShow(records []format.Record, limit int, offset int) (string, error) 
 	var output strings.Builder
 	fmt.Fprintln(&output, string(data))
 	fmt.Fprintf(&output, "── %d of %d records ──\n", shown, total)
+
 	return output.String(), nil
 }

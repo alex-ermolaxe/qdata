@@ -31,6 +31,7 @@ func TransformToMap(records []format.Record, keyPath, valuePath string) ([]forma
 		transformed.Set(fmt.Sprint(keyValue), value)
 		result[i] = transformed
 	}
+
 	return result, nil
 }
 
@@ -39,6 +40,7 @@ func isScalar(value any) bool {
 		return false
 	}
 	kind := reflect.TypeOf(value).Kind()
+
 	return kind == reflect.String ||
 		kind == reflect.Bool ||
 		(kind >= reflect.Int && kind <= reflect.Int64) ||

@@ -46,12 +46,14 @@ func Sort(records []format.Record, field string, direction SortDirection) ([]for
 		less, err := lessValues(valI, valJ)
 		if err != nil {
 			sortErr = err
+
 			return false
 		}
 
 		if direction == SortDesc {
 			return !less
 		}
+
 		return less
 	})
 

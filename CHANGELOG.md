@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Unified command definitions across CLI execution, tab completion, and MCP tool exposure.
+- Improved tab completion with command-specific context for command arguments and field paths.
+
+### Fixed
+
+- `SCHEMA` now infers and displays array element types, including after `FLATTEN` and `RESET`.
+- Command parsing now handles leading and trailing whitespace correctly.
+
 ## [2.0.0] - 2026-11-05
 
 ### Added

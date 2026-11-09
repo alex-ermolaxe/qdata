@@ -11,10 +11,6 @@ func Split(path string) []string {
 	return strings.Split(path, ".")
 }
 
-func Join(parts []string) string {
-	return strings.Join(parts, ".")
-}
-
 // GetNested extracts a value from a record by path
 func GetNested(record format.Record, path string) (any, bool) {
 	parts := Split(path)
@@ -57,7 +53,9 @@ func GetNested(record format.Record, path string) (any, bool) {
 // GetNestedValues extracts a path from an object, traversing arrays and
 // returning the matching value from each element in an array.
 func GetNestedValues(record format.Record, path string) (any, bool) {
-	return getNestedValues(record, Split(path))
+	parts := Split(path)
+
+	return getNestedValues(record, parts)
 }
 
 func getNestedValues(value any, parts []string) (any, bool) {
@@ -73,6 +71,7 @@ func getNestedValues(value any, parts []string) (any, bool) {
 				values = append(values, itemValue)
 			}
 		}
+
 		return values, true
 	}
 
@@ -84,13 +83,16 @@ func getNestedValues(value any, parts []string) (any, bool) {
 	if !exists {
 		return nil, false
 	}
+
 	return getNestedValues(child, parts[1:])
 }
 
 // SelectNested copies the fields at path from source into destination.
 // When the path crosses an array, it projects each object in that array.
 func SelectNested(source, destination format.Record, path string) bool {
-	return selectObject(source, destination, Split(path))
+	parts := Split(path)
+
+	return selectObject(source, destination, parts)
 }
 
 func selectObject(source, destination any, parts []string) bool {
@@ -113,6 +115,7 @@ func selectObject(source, destination any, parts []string) bool {
 	}
 	if len(parts) == 1 {
 		targetMap.Set(key, value)
+
 		return true
 	}
 
@@ -159,6 +162,7 @@ func selectArray(source, destination any, parts []string) ([]any, bool) {
 			selected[i] = item
 		}
 	}
+
 	return selected, true
 }
 
@@ -168,6 +172,7 @@ func asOrderedMap(value any) (*orderedmap.OrderedMap, bool) {
 		if object == nil {
 			return nil, false
 		}
+
 		return object, true
 	case orderedmap.OrderedMap:
 		return &object, true
@@ -176,6 +181,7 @@ func asOrderedMap(value any) (*orderedmap.OrderedMap, bool) {
 		for key, value := range object {
 			result.Set(key, value)
 		}
+
 		return result, true
 	default:
 		return nil, false
@@ -190,9 +196,11 @@ func getObjectField(object *orderedmap.OrderedMap, key string) (string, any, boo
 	for _, actualKey := range object.Keys() {
 		if strings.ToUpper(actualKey) == upperKey {
 			value, ok := object.Get(actualKey)
+
 			return actualKey, value, ok
 		}
 	}
+
 	return "", nil, false
 }
 
@@ -202,9 +210,11 @@ func findKeyCaseInsensitive(m *orderedmap.OrderedMap, key string) (any, bool) {
 	for _, k := range m.Keys() {
 		if strings.ToUpper(k) == upperKey {
 			val, ok := m.Get(k)
+
 			return val, ok
 		}
 	}
+
 	return nil, false
 }
 
@@ -218,6 +228,7 @@ func SetNested(record format.Record, path string, value any) {
 			if c, ok := current.(*orderedmap.OrderedMap); ok {
 				c.Set(part, value)
 			}
+
 			return
 		}
 
@@ -244,6 +255,7 @@ func DeleteNested(record format.Record, path string) {
 			if c, ok := current.(*orderedmap.OrderedMap); ok {
 				c.Delete(part)
 			}
+
 			return
 		}
 

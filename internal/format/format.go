@@ -47,6 +47,7 @@ func Detect(filename string) (Format, error) {
 			}
 		}
 	}
+
 	return nil, fmt.Errorf("unsupported format: .%s", ext)
 }
 
@@ -56,5 +57,6 @@ func Get(name string) (Format, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown format: %s", name)
 	}
+
 	return f, nil
 }

@@ -19,7 +19,14 @@ func TestSelectFieldsFromDecodedJSONObjectArray(t *testing.T) {
 	}
 
 	inferred := schema.Infer(records, 100)
-	if _, ok := inferred.Get("items.name"); !ok {
+	hasItemsName := false
+	for _, path := range inferred.AllPaths() {
+		if path == "items.name" {
+			hasItemsName = true
+			break
+		}
+	}
+	if !hasItemsName {
 		t.Fatal("schema did not infer field items.name from JSON")
 	}
 
