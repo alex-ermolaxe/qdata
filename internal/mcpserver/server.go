@@ -52,48 +52,11 @@ func (srv *mcpServer) registerTools(mcpSrv *server.MCPServer) {
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("ID of the session to close.")),
 	), srv.closeSession)
 
-	srv.addCommandTool(mcpSrv, "where",
-		"Filter records in a session. Syntax: <field> <operator> <value>, optionally combined with AND or OR. Operators: =, !=, >, <, >=, <=, ~, !~, ^, $, IN, EXISTS. Nested fields use dot paths (for example address.city). Example: status = \"active\" AND age >= 18.",
-		"condition", "Filter condition in qdata syntax; nested field paths use dots.",
-		"WHERE")
-	srv.addCommandTool(mcpSrv, "select",
-		"Keep only the specified comma-separated fields in each record. Supports nested dot paths and fields inside arrays of objects, such as items.name. Use * to retain all fields.",
-		"fields", "Comma-separated field paths, for example id, name, items.name.",
-		"SELECT")
-	srv.addCommandTool(mcpSrv, "exclude",
-		"Remove the specified comma-separated fields from each record. Nested fields can be addressed with dot paths.",
-		"fields", "Comma-separated field paths to remove.",
-		"EXCLUDE")
-	srv.addCommandTool(mcpSrv, "sort",
-		"Sort the current records by a field path. The optional direction is ASC or DESC; it defaults to ASC.",
-		"spec", "Field path and optional direction, for example created_at DESC.",
-		"SORT")
-	srv.addCommandTool(mcpSrv, "flatten",
-		"Flatten a nested object field into its parent record. If any nested field collides with an existing top-level field, all fields from the object are prefixed with the object's name.",
-		"field", "Name of the object field to flatten.",
-		"FLATTEN")
-	srv.addCommandTool(mcpSrv, "transform",
-		"Transform each record into a one-key object. The KEY path supplies the dynamic property name; VALUE supplies the property value. Paths through arrays of objects extract the value from each element. Example: TO-MAP KEY sap_order_id VALUE assets.name.",
-		"spec", "Transform specification, for example TO-MAP KEY sap_order_id VALUE assets.name.",
-		"TRANSFORM")
-	srv.addCommandTool(mcpSrv, "show",
-		"Display the current records as formatted JSON. Options may include LIMIT <n> and OFFSET <n>; provide an empty options string to show all records.",
-		"options", "Optional display options such as LIMIT 20 OFFSET 10; use an empty string for all records.",
-		"SHOW")
-	srv.addCommandTool(mcpSrv, "save",
-		"Save the current records beside the source file. Options may include AS <filename> and FORMAT <format>. If the target exists, this tool returns an error instead of prompting; choose a different filename.",
-		"options", "Save options such as AS filtered_users FORMAT json. Use an empty string for the default output name and format.",
-		"SAVE")
-
-	srv.addSessionCommandTool(mcpSrv, "reset",
-		"Restore the session's current records to the original loaded dataset.",
-		"RESET")
-	srv.addSessionCommandTool(mcpSrv, "count",
-		"Return the number of records in the session's current result.",
-		"COUNT")
-	srv.addSessionCommandTool(mcpSrv, "schema",
-		"Show the fields and inferred types available in the session's current result. Use this before constructing field paths and filter conditions.",
-		"SCHEMA")
+	for _, spec := range engine.CommandSpecs() {
+		if spec.MCP != nil {
+			srv.addCommandTool(mcpSrv, spec)
+		}
+	}
 }
 
 func (srv *mcpServer) load(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -159,17 +122,25 @@ func (srv *mcpServer) closeSession(_ context.Context, request mcp.CallToolReques
 	return textResult(fmt.Sprintf("Closed session %q.", sessionID)), nil
 }
 
-func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, name, description, argument, argumentDescription, keyword string) {
-	mcpSrv.AddTool(mcp.NewTool(name,
-		mcp.WithDescription(description),
+func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.CommandSpec) {
+	mcpSpec := spec.MCP
+	options := []mcp.ToolOption{
+		mcp.WithDescription(mcpSpec.Description),
 		mcp.WithString("session_id", mcp.Required(), mcp.Description("ID returned by load for the session to operate on.")),
-		mcp.WithString(argument, mcp.Required(), mcp.Description(argumentDescription)),
-	), func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		sessionID, err := request.RequireString("session_id")
-		if err != nil {
-			return errorResult(err), nil
+	}
+	for _, argument := range mcpSpec.Arguments {
+		propertyOptions := []mcp.PropertyOption{mcp.Description(argument.Description)}
+		if argument.Required {
+			propertyOptions = append(propertyOptions, mcp.Required())
 		}
-		argumentValue, err := request.RequireString(argument)
+		options = append(options, mcp.WithString(argument.Name, propertyOptions...))
+	}
+	if mcpSpec.DestructiveHint != nil {
+		options = append(options, mcp.WithDestructiveHintAnnotation(*mcpSpec.DestructiveHint))
+	}
+
+	mcpSrv.AddTool(mcp.NewTool(mcpSpec.Name, options...), func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		sessionID, err := request.RequireString("session_id")
 		if err != nil {
 			return errorResult(err), nil
 		}
@@ -181,38 +152,24 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, name, description
 			return errorResult(fmt.Errorf("unknown session_id %q", sessionID)), nil
 		}
 
-		line := keyword
-		if strings.TrimSpace(argumentValue) != "" {
-			line += " " + argumentValue
+		line := spec.Name
+		for _, argument := range mcpSpec.Arguments {
+			value, err := request.RequireString(argument.Name)
+			if err != nil {
+				if argument.Required {
+					return errorResult(err), nil
+				}
+				value = request.GetString(argument.Name, "")
+			}
+			if strings.TrimSpace(value) != "" {
+				line += " " + value
+			}
 		}
-		output, err := eng.ExecuteCommand(line)
+		result, err := eng.ExecuteCommand(line)
 		if err != nil {
 			return errorResult(err), nil
 		}
-		return textResult(output), nil
-	})
-}
-
-func (srv *mcpServer) addSessionCommandTool(mcpSrv *server.MCPServer, name, description, keyword string) {
-	mcpSrv.AddTool(mcp.NewTool(name,
-		mcp.WithDescription(description),
-		mcp.WithString("session_id", mcp.Required(), mcp.Description("ID returned by load for the session to operate on.")),
-	), func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		sessionID, err := request.RequireString("session_id")
-		if err != nil {
-			return errorResult(err), nil
-		}
-		srv.mu.Lock()
-		defer srv.mu.Unlock()
-		eng, exists := srv.sessions[sessionID]
-		if !exists {
-			return errorResult(fmt.Errorf("unknown session_id %q", sessionID)), nil
-		}
-		output, err := eng.ExecuteCommand(keyword)
-		if err != nil {
-			return errorResult(err), nil
-		}
-		return textResult(output), nil
+		return textResult(result.Output), nil
 	})
 }
 

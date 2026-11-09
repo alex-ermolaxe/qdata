@@ -3,7 +3,9 @@ package engine
 import (
 	"testing"
 
+	"github.com/alex-ermolaxe/qdata/internal/completer"
 	"github.com/alex-ermolaxe/qdata/internal/format"
+	"github.com/alex-ermolaxe/qdata/internal/schema"
 	"github.com/iancoleman/orderedmap"
 )
 
@@ -82,6 +84,45 @@ func TestParseTransformArgs(t *testing.T) {
 				t.Errorf("parseTransformArgs() = (%q, %q), want (%q, %q)",
 					gotKey, gotValue, tt.wantKey, tt.wantValue)
 			}
+		})
+	}
+}
+
+func TestTransformAutocomplete(t *testing.T) {
+	asset := orderedmap.New()
+	asset.Set("name", "K06")
+	record := format.NewRecord()
+	record.Set("sap_order_id", "order-1")
+	record.Set("assets", []any{asset})
+	dataSchema := schema.Infer([]format.Record{record}, 100)
+	c := completer.New(
+		func() *schema.Schema { return dataSchema },
+		[]completer.CommandCompletion{{
+			Name:     transformCommand.Name,
+			Complete: transformCommand.Completion,
+		}},
+	)
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "TRANSFORM ", want: "TO-MAP"},
+		{input: "TRANSFORM TO-MAP ", want: "KEY"},
+		{input: "TRANSFORM TO-MAP KEY ", want: "sap_order_id"},
+		{input: "TRANSFORM TO-MAP KEY sap_order_id ", want: "VALUE"},
+		{input: "TRANSFORM TO-MAP KEY sap_order_id VALUE assets.", want: "name"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, _ := c.Do([]rune(tt.input), len([]rune(tt.input)))
+			for _, suggestion := range got {
+				if string(suggestion) == tt.want {
+					return
+				}
+			}
+			t.Errorf("autocomplete for %q did not suggest %q", tt.input, tt.want)
 		})
 	}
 }
