@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the interactive `INFO` command to `HELP` and added a session-independent `help` tool to the MCP server.
+
 ## [2.0.1] - 2026-11-09
 
 ### Changed

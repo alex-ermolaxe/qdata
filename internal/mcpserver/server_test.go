@@ -34,7 +34,7 @@ func TestSessionsAreIndependent(t *testing.T) {
 	tools := mcpSrv.ListTools()
 	for _, name := range []string{
 		"load", "list_sessions", "close_session", "where", "select", "exclude",
-		"sort", "flatten", "transform", "show", "save", "reset", "count", "schema",
+		"sort", "flatten", "transform", "show", "save", "reset", "count", "schema", "help",
 	} {
 		if _, exists := tools[name]; !exists {
 			t.Errorf("MCP tool %q was not registered", name)
@@ -44,6 +44,14 @@ func TestSessionsAreIndependent(t *testing.T) {
 		if _, exists := tools[name]; exists {
 			t.Errorf("MCP tool %q must not be registered", name)
 		}
+	}
+	help := tools["help"].Handler
+	helpResult, err := help(context.Background(), toolRequest(map[string]any{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if helpResult.IsError || !strings.Contains(resultText(t, helpResult), "HELP") {
+		t.Errorf("help result = %q, want command list", resultText(t, helpResult))
 	}
 	loadAnnotations := tools["load"].Tool.Annotations
 	if loadAnnotations.DestructiveHint == nil || *loadAnnotations.DestructiveHint {

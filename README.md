@@ -18,7 +18,7 @@ all in a simple SQL-like syntax.
 - [RESET — Reset to original](#reset--reset-to-original)
 - [COUNT — Count records](#count--count-records)
 - [SCHEMA — View data schema](#schema--view-data-schema)
-- [INFO — List commands](#info--list-commands)
+- [HELP — List commands](#help--list-commands)
 - [EXIT — Quit session](#exit--quit-session)
 - [VERSION — Show application version](#version--show-application-version)
 - [Using with AI Assistants (MCP)](#using-with-ai-assistants-mcp)
@@ -126,8 +126,9 @@ If qdata is not in `PATH`, replace `"command": "qdata"` with the absolute path t
 | `reset` | Restore the session's original records. |
 | `count` | Count records in the current result. |
 | `schema` | Show available fields and inferred types. |
+| `help` | List available qdata commands. |
 
-All tools except `load` and `list_sessions` require `session_id`, which is returned by `load`.
+All tools except `load`, `list_sessions`, and `help` require `session_id`, which is returned by `load`.
 
 ### Usage notes
 
@@ -538,12 +539,12 @@ Fields in current dataset:
 
 ---
 
-## INFO — List commands
+## HELP — List commands
 
 Prints the available interactive commands and the arguments each command accepts.
 
 ```
-INFO
+HELP
 ```
 
 ---
@@ -582,7 +583,7 @@ Press `Tab` at any point to trigger autocomplete.
 
 | Context | Suggestions |
 |---------|-------------|
-| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `TRANSFORM`, `RESET`, `COUNT`, `SCHEMA`, `INFO`, `EXIT` |
+| Beginning of input | Command keywords: `WHERE`, `SELECT`, `EXCLUDE`, `SORT`, `SHOW`, `SAVE`, `FLATTEN`, `TRANSFORM`, `RESET`, `COUNT`, `SCHEMA`, `HELP`, `EXIT` |
 | After a command keyword | Field names from the current dataset schema |
 | After a dot in a field path | Nested field names (e.g. `address.` → `address.city`, `address.zip`) |
 | After `SORT <field>` | `ASC`, `DESC` |
