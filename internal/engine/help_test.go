@@ -5,23 +5,26 @@ import (
 	"testing"
 )
 
-func TestInfoCommandListsRegisteredCommands(t *testing.T) {
+func TestHelpCommandListsRegisteredCommands(t *testing.T) {
 	e := &Engine{}
-	result, err := e.ExecuteCommand("INFO")
+	result, err := e.ExecuteCommand("HELP")
 	if err != nil {
-		t.Fatalf("INFO error = %v", err)
+		t.Fatalf("HELP error = %v", err)
 	}
 
 	for _, name := range []string{
 		"WHERE", "SELECT", "EXCLUDE", "SORT", "SHOW", "SAVE", "FLATTEN",
-		"TRANSFORM", "RESET", "COUNT", "SCHEMA", "INFO", "EXIT",
+		"TRANSFORM", "RESET", "COUNT", "SCHEMA", "HELP", "EXIT",
 	} {
 		if !strings.Contains(result.Output, name) {
-			t.Errorf("INFO output does not include %s", name)
+			t.Errorf("HELP output does not include %s", name)
 		}
 	}
 	if strings.Contains(result.Output, "VERSION") {
-		t.Error("INFO lists VERSION, which is a flag rather than a command")
+		t.Error("HELP lists VERSION, which is a flag rather than a command")
+	}
+	if _, err := e.ExecuteCommand("INFO"); err == nil {
+		t.Error("INFO is still registered as a command")
 	}
 }
 

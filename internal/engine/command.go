@@ -23,10 +23,11 @@ type CommandResult struct {
 
 // MCPToolSpec describes an MCP representation without depending on an MCP SDK.
 type MCPToolSpec struct {
-	Name            string
-	Description     string
-	Arguments       []MCPArgumentSpec
-	DestructiveHint *bool
+	Name               string
+	Description        string
+	Arguments          []MCPArgumentSpec
+	DestructiveHint    *bool
+	SessionIndependent bool
 }
 
 // MCPArgumentSpec describes one argument exposed by an MCP tool.

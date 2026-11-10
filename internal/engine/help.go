@@ -5,20 +5,25 @@ import (
 	"strings"
 )
 
-func infoCommandSpec() CommandSpec {
+func helpCommandSpec() CommandSpec {
 	return CommandSpec{
-		Name:        "INFO",
-		Usage:       "INFO",
+		Name:        "HELP",
+		Usage:       "HELP",
 		Description: "Show this command list.",
-		Run:         runInfoCommand,
+		Run:         runHelpCommand,
+		MCP: &MCPToolSpec{
+			Name:               "help",
+			Description:        "List available qdata commands and their usage.",
+			SessionIndependent: true,
+		},
 	}
 }
 
-func runInfoCommand(_ *Engine, _ string) (CommandResult, error) {
-	return CommandResult{Output: renderInfo()}, nil
+func runHelpCommand(_ *Engine, _ string) (CommandResult, error) {
+	return CommandResult{Output: renderHelp()}, nil
 }
 
-func renderInfo() string {
+func renderHelp() string {
 	commands := CommandSpecs()
 	maxUsageWidth := 0
 	for _, command := range commands {

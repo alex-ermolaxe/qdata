@@ -137,7 +137,9 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.Comma
 	mcpSpec := spec.MCP
 	options := []mcp.ToolOption{
 		mcp.WithDescription(mcpSpec.Description),
-		mcp.WithString("session_id", mcp.Required(), mcp.Description("ID returned by load for the session to operate on.")),
+	}
+	if !mcpSpec.SessionIndependent {
+		options = append(options, mcp.WithString("session_id", mcp.Required(), mcp.Description("ID returned by load for the session to operate on.")))
 	}
 	for _, argument := range mcpSpec.Arguments {
 		propertyOptions := []mcp.PropertyOption{mcp.Description(argument.Description)}
@@ -151,18 +153,22 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.Comma
 	}
 
 	mcpSrv.AddTool(mcp.NewTool(mcpSpec.Name, options...), func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		sessionID, err := request.RequireString("session_id")
-		if err != nil {
-			return errorResult(err), nil
-		}
+		var eng *engine.Engine
+		if !mcpSpec.SessionIndependent {
+			sessionID, err := request.RequireString("session_id")
+			if err != nil {
+				return errorResult(err), nil
+			}
 
-		srv.mu.Lock()
-		defer srv.mu.Unlock()
-		eng, exists := srv.sessions[sessionID]
-		if !exists {
-			err := fmt.Errorf("unknown session_id %q", sessionID)
+			srv.mu.Lock()
+			defer srv.mu.Unlock()
+			var exists bool
+			eng, exists = srv.sessions[sessionID]
+			if !exists {
+				err := fmt.Errorf("unknown session_id %q", sessionID)
 
-			return errorResult(err), nil
+				return errorResult(err), nil
+			}
 		}
 
 		line := spec.Name
@@ -178,7 +184,13 @@ func (srv *mcpServer) addCommandTool(mcpSrv *server.MCPServer, spec engine.Comma
 				line += " " + value
 			}
 		}
-		result, err := eng.ExecuteCommand(line)
+		var result engine.CommandResult
+		var err error
+		if mcpSpec.SessionIndependent {
+			result, err = spec.Run(nil, strings.TrimPrefix(line, spec.Name))
+		} else {
+			result, err = eng.ExecuteCommand(line)
+		}
 		if err != nil {
 			return errorResult(err), nil
 		}

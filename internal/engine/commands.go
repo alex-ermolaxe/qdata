@@ -14,7 +14,7 @@ func CommandSpecs() []CommandSpec {
 		resetCommand,
 		countCommand,
 		schemaCommand,
-		infoCommandSpec(),
+		helpCommandSpec(),
 		exitCommand,
 	}
 }
